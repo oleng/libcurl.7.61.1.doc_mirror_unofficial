@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - smtp-ssl.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>smtp-ssl.c</b></div>
+<h1> smtp-ssl.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/smtp-ssl.c">Download smtp-ssl.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2016, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * SMTP example using SSL
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* This is a simple example showing how to send mail using libcurl's SMTP
+ * capabilities. It builds on the smtp-mail.c example to add authentication
+ * and, more importantly, transport security to protect the authentication
+ * details from being snooped.
+ *
+ * Note that this example requires libcurl 7.20.0 or above.
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">FROM</FONT>    <B><FONT COLOR="#BC8F8F">&quot;&lt;sender@example.org&gt;&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">TO</FONT>      <B><FONT COLOR="#BC8F8F">&quot;&lt;addressee@example.net&gt;&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">CC</FONT>      <B><FONT COLOR="#BC8F8F">&quot;&lt;info@example.org&gt;&quot;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *payload_text[] = {
+  <B><FONT COLOR="#BC8F8F">&quot;Date: Mon, 29 Nov 2010 21:54:29 +1100\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;To: &quot;</FONT></B> TO <B><FONT COLOR="#BC8F8F">&quot;\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;From: &quot;</FONT></B> FROM <B><FONT COLOR="#BC8F8F">&quot; (Example User)\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Cc: &quot;</FONT></B> CC <B><FONT COLOR="#BC8F8F">&quot; (Another example User)\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Message-ID: &lt;dcd7cb36-11db-487a-9f3a-e652a9458efd@&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;rfcpedant.example.org&gt;\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Subject: SMTP SSL example message\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;\r\n&quot;</FONT></B>, <I><FONT COLOR="#B22222">/* empty line to divide headers from body, see RFC5322 */ </FONT></I>
+  <B><FONT COLOR="#BC8F8F">&quot;The body of the message starts here.\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;It could be a lot of lines, could be MIME encoded, whatever.\r\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Check RFC5322.\r\n&quot;</FONT></B>,
+  NULL
+};
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> upload_status {
+  <B><FONT COLOR="#228B22">int</FONT></B> lines_read;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">payload_source</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> upload_status *upload_ctx = (<B><FONT COLOR="#228B22">struct</FONT></B> upload_status *)userp;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *data;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>((size == 0) || (nmemb == 0) || ((size*nmemb) &lt; 1)) {
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+&nbsp;
+  data = payload_text[upload_ctx-&gt;lines_read];
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(data) {
+    size_t len = strlen(data);
+    memcpy(ptr, data, len);
+    upload_ctx-&gt;lines_read++;
+&nbsp;
+    <B><FONT COLOR="#A020F0">return</FONT></B> len;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res = CURLE_OK;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *recipients = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> upload_status upload_ctx;
+&nbsp;
+  upload_ctx.lines_read = 0;
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* Set username and password */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a>, <B><FONT COLOR="#BC8F8F">&quot;user&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PASSWORD.html">CURLOPT_PASSWORD</a>, <B><FONT COLOR="#BC8F8F">&quot;secret&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* This is the URL for your mailserver. Note the use of smtps:// rather
+     * than smtp:// to request a SSL based connection. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;smtps://mainserver.example.net&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* If you want to connect to a site who isn't using a certificate that is
+     * signed by one of the certs in the CA bundle you have, you can skip the
+     * verification of the server's certificate. This makes the connection
+     * A LOT LESS SECURE.
+     *
+     * If you have a CA cert for the server stored someplace else than in the
+     * default bundle, then the <a href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a> option might come handy for
+     * you. */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">SKIP_PEER_VERIFICATION</FONT>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 0L);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+    <I><FONT COLOR="#B22222">/* If the site you're connecting to uses a different host name that what
+     * they have mentioned in their server certificate's commonName (or
+     * subjectAltName) fields, libcurl will refuse to connect. You can skip
+     * this check, but this will make the connection less secure. */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">SKIP_HOSTNAME_VERIFICATION</FONT>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, 0L);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Note that this option isn't strictly required, omitting it will result
+     * in libcurl sending the MAIL FROM command with empty sender data. All
+     * autoresponses should have an empty reverse-path, and should be directed
+     * to the address in the reverse-path which triggered them. Otherwise,
+     * they could cause an endless loop. See RFC 5321 Section 4.5.5 for more
+     * details.
+     */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_MAIL_FROM.html">CURLOPT_MAIL_FROM</a>, FROM);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Add two recipients, in this particular case they correspond to the
+     * To: and Cc: addressees in the header, but they could be any kind of
+     * recipient. */ </FONT></I>
+    recipients = <a href="curl_slist_append.html">curl_slist_append</a>(recipients, TO);
+    recipients = <a href="curl_slist_append.html">curl_slist_append</a>(recipients, CC);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_MAIL_RCPT.html">CURLOPT_MAIL_RCPT</a>, recipients);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* We're using a callback function to specify the payload (the headers and
+     * body of the message). You could just use the <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a> option to
+     * specify a FILE pointer to read from. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, payload_source);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, &amp;upload_ctx);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Since the traffic will be encrypted, it is very useful to turn on debug
+     * information within libcurl to see what is happening during the
+     * transfer */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Send the message */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Free the list of recipients */ </FONT></I>
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(recipients);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> (<B><FONT COLOR="#228B22">int</FONT></B>)res;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

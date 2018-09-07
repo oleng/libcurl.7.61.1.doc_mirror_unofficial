@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - smtp-mime.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>smtp-mime.c</b></div>
+<h1> smtp-mime.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/smtp-mime.c">Download smtp-mime.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * SMTP example showing how to send mime e-mails
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* This is a simple example showing how to send mime mail using libcurl's SMTP
+ * capabilities. For an example of using the multi interface please see
+ * smtp-multi.c.
+ *
+ * Note that this example requires libcurl 7.56.0 or above.
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">FROM</FONT>    <B><FONT COLOR="#BC8F8F">&quot;&lt;sender@example.org&gt;&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">TO</FONT>      <B><FONT COLOR="#BC8F8F">&quot;&lt;addressee@example.net&gt;&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">CC</FONT>      <B><FONT COLOR="#BC8F8F">&quot;&lt;info@example.org&gt;&quot;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *headers_text[] = {
+  <B><FONT COLOR="#BC8F8F">&quot;Date: Tue, 22 Aug 2017 14:08:43 +0100&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;To: &quot;</FONT></B> TO,
+  <B><FONT COLOR="#BC8F8F">&quot;From: &quot;</FONT></B> FROM <B><FONT COLOR="#BC8F8F">&quot; (Example User)&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Cc: &quot;</FONT></B> CC <B><FONT COLOR="#BC8F8F">&quot; (Another example User)&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Message-ID: &lt;dcd7cb36-11db-487a-9f3a-e652a9458efd@&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;rfcpedant.example.org&gt;&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;Subject: example sending a MIME-formatted message&quot;</FONT></B>,
+  NULL
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> inline_text[] =
+  <B><FONT COLOR="#BC8F8F">&quot;This is the inline text message of the e-mail.\r\n&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;\r\n&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;  It could be a lot of lines that would be displayed in an e-mail\r\n&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;viewer that is not able to handle HTML.\r\n&quot;</FONT></B>;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> inline_html[] =
+  <B><FONT COLOR="#BC8F8F">&quot;&lt;html&gt;&lt;body&gt;\r\n&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;&lt;p&gt;This is the inline &lt;b&gt;HTML&lt;/b&gt; message of the e-mail.&lt;/p&gt;&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;&lt;br /&gt;\r\n&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;&lt;p&gt;It could be a lot of HTML data that would be displayed by &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;e-mail viewers able to handle HTML.&lt;/p&gt;&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;&lt;/body&gt;&lt;/html&gt;\r\n&quot;</FONT></B>;
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res = CURLE_OK;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *headers = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *recipients = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *slist = NULL;
+  curl_mime *mime;
+  curl_mime *alt;
+  curl_mimepart *part;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> **cpp;
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* This is the URL for your mailserver */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;smtp://mail.example.com&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Note that this option isn't strictly required, omitting it will result
+     * in libcurl sending the MAIL FROM command with empty sender data. All
+     * autoresponses should have an empty reverse-path, and should be directed
+     * to the address in the reverse-path which triggered them. Otherwise,
+     * they could cause an endless loop. See RFC 5321 Section 4.5.5 for more
+     * details.
+     */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_MAIL_FROM.html">CURLOPT_MAIL_FROM</a>, FROM);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Add two recipients, in this particular case they correspond to the
+     * To: and Cc: addressees in the header, but they could be any kind of
+     * recipient. */ </FONT></I>
+    recipients = <a href="curl_slist_append.html">curl_slist_append</a>(recipients, TO);
+    recipients = <a href="curl_slist_append.html">curl_slist_append</a>(recipients, CC);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_MAIL_RCPT.html">CURLOPT_MAIL_RCPT</a>, recipients);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Build and set the message header list. */ </FONT></I>
+    <B><FONT COLOR="#A020F0">for</FONT></B>(cpp = headers_text; *cpp; cpp++)
+      headers = <a href="curl_slist_append.html">curl_slist_append</a>(headers, *cpp);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, headers);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Build the mime message. */ </FONT></I>
+    mime = <a href="curl_mime_init.html">curl_mime_init</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* The inline part is an alternative proposing the html and the text
+       versions of the e-mail. */ </FONT></I>
+    alt = <a href="curl_mime_init.html">curl_mime_init</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* HTML message. */ </FONT></I>
+    part = <a href="curl_mime_addpart.html">curl_mime_addpart</a>(alt);
+    <a href="curl_mime_data.html">curl_mime_data</a>(part, inline_html, CURL_ZERO_TERMINATED);
+    <a href="curl_mime_type.html">curl_mime_type</a>(part, <B><FONT COLOR="#BC8F8F">&quot;text/html&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Text message. */ </FONT></I>
+    part = <a href="curl_mime_addpart.html">curl_mime_addpart</a>(alt);
+    <a href="curl_mime_data.html">curl_mime_data</a>(part, inline_text, CURL_ZERO_TERMINATED);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Create the inline part. */ </FONT></I>
+    part = <a href="curl_mime_addpart.html">curl_mime_addpart</a>(mime);
+    <a href="curl_mime_subparts.html">curl_mime_subparts</a>(part, alt);
+    <a href="curl_mime_type.html">curl_mime_type</a>(part, <B><FONT COLOR="#BC8F8F">&quot;multipart/alternative&quot;</FONT></B>);
+    slist = <a href="curl_slist_append.html">curl_slist_append</a>(NULL, <B><FONT COLOR="#BC8F8F">&quot;Content-Disposition: inline&quot;</FONT></B>);
+    <a href="curl_mime_headers.html">curl_mime_headers</a>(part, slist, 1);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Add the current source program as an attachment. */ </FONT></I>
+    part = <a href="curl_mime_addpart.html">curl_mime_addpart</a>(mime);
+    <a href="curl_mime_filedata.html">curl_mime_filedata</a>(part, <B><FONT COLOR="#BC8F8F">&quot;smtp-mime.c&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_MIMEPOST.html">CURLOPT_MIMEPOST</a>, mime);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Send the message */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Free lists. */ </FONT></I>
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(recipients);
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(headers);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* curl won't send the QUIT command until you call cleanup, so you should
+     * be able to re-use this connection for additional messages (setting
+     * CURLOPT_MAIL_FROM and <a href="CURLOPT_MAIL_RCPT.html">CURLOPT_MAIL_RCPT</a> as required, and calling
+     * <a href="curl_easy_perform.html">curl_easy_perform</a>() again. It may not be a good idea to keep the
+     * connection open for a very long time though (more than a few minutes
+     * may result in the server timing out the connection), and you do want to
+     * clean up in the end.
+     */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Free multipart message. */ </FONT></I>
+    <a href="curl_mime_free.html">curl_mime_free</a>(mime);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> (<B><FONT COLOR="#228B22">int</FONT></B>)res;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

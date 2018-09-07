@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - threaded-shared-conn.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>threaded-shared-conn.c</b></div>
+<h1> threaded-shared-conn.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/threaded-shared-conn.c">Download threaded-shared-conn.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Multi-threaded transfers sharing a single connection pool
+ * &lt;/DESC&gt;
+ *
+ * This example fires up NUM_THREADS threads and in each single thread, it
+ * downloads the same fixed URL a URL_ITERATIONS number of times. The received
+ * data is just thrown away. It sets up a single shared object that holds the
+ * connection cache and all easy handles in all threads share that same cache.
+ *
+ * This example uses pthreads for threads and mutexes, but should be easy to
+ * modify to use different thread/mutex system should you want to.
+ *
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;pthread.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+  URL to fetch. If you select HTTPS, you need to use a TLS backend with mutex
+  locks taken care of (OpenSSL 1.1.x, NSS, etc) or add SSL mutex callbacks!
+*/ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">URL</FONT> <B><FONT COLOR="#BC8F8F">&quot;http://localhost/4KB&quot;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* number of threads to fire up in parallel */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">NUM_THREADS</FONT> 67
+&nbsp;
+<I><FONT COLOR="#B22222">/* how many times each URL is transferred per thread */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">URL_ITERATIONS</FONT> 11235
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> pthread_mutex_t connlock;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_db</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *data)
+{
+  <I><FONT COLOR="#B22222">/* not interested in the downloaded bytes, return the size */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)ptr;  <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)data; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  <B><FONT COLOR="#A020F0">return</FONT></B> (size_t)(size * nmemb);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">lock_cb</FONT></B>(CURL *handle, curl_lock_data data,
+                    curl_lock_access access, <B><FONT COLOR="#228B22">void</FONT></B> *userptr)
+{
+  (<B><FONT COLOR="#228B22">void</FONT></B>)access; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)userptr; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)handle; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)data; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  pthread_mutex_lock(&amp;connlock);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">unlock_cb</FONT></B>(CURL *handle, curl_lock_data data,
+                      <B><FONT COLOR="#228B22">void</FONT></B> *userptr)
+{
+  (<B><FONT COLOR="#228B22">void</FONT></B>)userptr; <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)handle;  <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)data;    <I><FONT COLOR="#B22222">/* unused */ </FONT></I>
+  pthread_mutex_unlock(&amp;connlock);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">init_locks</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  pthread_mutex_init(&amp;connlock, NULL);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">kill_locks</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  pthread_mutex_destroy(&amp;connlock);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> initurl {
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url;
+  CURLSH *share;
+  <B><FONT COLOR="#228B22">int</FONT></B> threadno;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> *<B><FONT COLOR="#0000FF">run_thread</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> initurl *u = (<B><FONT COLOR="#228B22">struct</FONT></B> initurl *)ptr;
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i &lt; URL_ITERATIONS; i++) {
+    CURL *curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, u-&gt;url);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 0L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SHARE.html">CURLOPT_SHARE</a>, u-&gt;share);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_db);
+    <a href="curl_easy_perform.html">curl_easy_perform</a>(curl); <I><FONT COLOR="#B22222">/* ignores error */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Thread %d transfer %d\n&quot;</FONT></B>, u-&gt;threadno, i);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  pthread_t tid[NUM_THREADS];
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+  <B><FONT COLOR="#228B22">int</FONT></B> error;
+  CURLSH *share;
+  <B><FONT COLOR="#228B22">struct</FONT></B> initurl url[NUM_THREADS];
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Must initialize libcurl before any threads are started */ </FONT></I>
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+&nbsp;
+  share = <a href="curl_share_init.html">curl_share_init</a>();
+  <a href="curl_share_setopt.html">curl_share_setopt</a>(share, CURLSHOPT_LOCKFUNC, lock_cb);
+  <a href="curl_share_setopt.html">curl_share_setopt</a>(share, CURLSHOPT_UNLOCKFUNC, unlock_cb);
+  <a href="curl_share_setopt.html">curl_share_setopt</a>(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+&nbsp;
+  init_locks();
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt; NUM_THREADS; i++) {
+    url[i].url = URL;
+    url[i].share = share;
+    url[i].threadno = i;
+    error = pthread_create(&amp;tid[i], NULL, run_thread, &amp;url[i]);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(0 != error)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Couldn't run thread number %d, errno %d\n&quot;</FONT></B>, i, error);
+    <B><FONT COLOR="#A020F0">else</FONT></B>
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Thread %d, gets %s\n&quot;</FONT></B>, i, URL);
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* now wait for all threads to terminate */ </FONT></I>
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt; NUM_THREADS; i++) {
+    error = pthread_join(tid[i], NULL);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Thread %d terminated\n&quot;</FONT></B>, i);
+  }
+&nbsp;
+  kill_locks();
+&nbsp;
+  <a href="curl_share_cleanup.html">curl_share_cleanup</a>(share);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

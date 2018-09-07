@@ -1,0 +1,405 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - synctime.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>synctime.c</b></div>
+<h1> synctime.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/synctime.c">Download synctime.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Set your system time from a remote HTTP server's Date: header.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* This example code only builds as-is on Windows.
+ *
+ * While Unix/Linux user, you do not need this software.
+ * You can achieve the same result as synctime using curl, awk and date.
+ * Set proxy as according to your network, but beware of proxy Cache-Control.
+ *
+ * To set your system clock, root access is required.
+ * # date -s &quot;`curl -sI http://nist.time.gov/timezone.cgi?UTC/s/0 \&nbsp;
+ *        | awk -F': ' '/Date: / {print $2}'`&quot;
+ *
+ * To view remote webserver date and time.
+ * $ curl -sI http://nist.time.gov/timezone.cgi?UTC/s/0 \&nbsp;
+ *        | awk -F': ' '/Date: / {print $2}'
+ *
+ * Synchronising your computer clock via Internet time server usually relies
+ * on DAYTIME, TIME, or NTP protocols. These protocols provide good accurate
+ * time synchronisation but it does not work very well through a
+ * firewall/proxy. Some adjustment has to be made to the firewall/proxy for
+ * these protocols to work properly.
+ *
+ * There is an indirect method. Since most webserver provide server time in
+ * their HTTP header, therefore you could synchronise your computer clock
+ * using HTTP protocol which has no problem with firewall/proxy.
+ *
+ * For this software to work, you should take note of these items.
+ * 1. Your firewall/proxy must allow your computer to surf internet.
+ * 2. Webserver system time must in sync with the NTP time server,
+ *    or at least provide an accurate time keeping.
+ * 3. Webserver HTTP header does not provide the milliseconds units,
+ *    so there is no way to get very accurate time.
+ * 4. This software could only provide an accuracy of +- a few seconds,
+ *    as Round-Trip delay time is not taken into consideration.
+ *    Compensation of network, firewall/proxy delay cannot be simply divide
+ *    the Round-Trip delay time by half.
+ * 5. Win32 SetSystemTime() API will set your computer clock according to
+ *    GMT/UTC time. Therefore your computer timezone must be properly set.
+ * 6. Webserver data should not be cached by the proxy server. Some
+ *    webserver provide Cache-Control to prevent caching.
+ *
+ * References:
+ * http://tf.nist.gov/timefreq/service/its.htm
+ * http://tf.nist.gov/timefreq/service/firewall.htm
+ *
+ * Usage:
+ * This software will synchronise your computer clock only when you issue
+ * it with --synctime. By default, it only display the webserver's clock.
+ *
+ * Written by: Frank (contributed to libcurl)
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS-IS&quot; AND WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+ * WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * IN NO EVENT SHALL THE AUTHOR OF THIS SOFTWARE BE LIABLE FOR
+ * ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+ * OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+ * WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF
+ * LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+ * OF THIS SOFTWARE.
+ *
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;time.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">ifndef</FONT></B> <FONT COLOR="#B8860B">__CYGWIN__</FONT>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;windows.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">MAX_STRING</FONT>              256
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">MAX_STRING1</FONT>             MAX_STRING + 1
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">SYNCTIME_UA</FONT> <B><FONT COLOR="#BC8F8F">&quot;synctime/1.0&quot;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B>
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> http_proxy[MAX_STRING1];
+  <B><FONT COLOR="#228B22">char</FONT></B> proxy_user[MAX_STRING1];
+  <B><FONT COLOR="#228B22">char</FONT></B> timeserver[MAX_STRING1];
+} conf_t;
+&nbsp;
+<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> DefaultTimeServer[3][MAX_STRING1] =
+{
+  <B><FONT COLOR="#BC8F8F">&quot;http://pool.ntp.org/&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;http://nist.time.gov/&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot;http://www.google.com/&quot;</FONT></B>
+};
+&nbsp;
+<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *DayStr[] = {<B><FONT COLOR="#BC8F8F">&quot;Sun&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Mon&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Tue&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Wed&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Thu&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Fri&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Sat&quot;</FONT></B>};
+<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *MthStr[] = {<B><FONT COLOR="#BC8F8F">&quot;Jan&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Feb&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Mar&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Apr&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;May&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Jun&quot;</FONT></B>,
+                        <B><FONT COLOR="#BC8F8F">&quot;Jul&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Aug&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Sep&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Oct&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Nov&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;Dec&quot;</FONT></B>};
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B>  ShowAllHeader;
+<B><FONT COLOR="#228B22">int</FONT></B>  AutoSyncTime;
+SYSTEMTIME SYSTime;
+SYSTEMTIME LOCALTime;
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">HTTP_COMMAND_HEAD</FONT>       0
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">HTTP_COMMAND_GET</FONT>        1
+&nbsp;
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">SyncTime_CURL_WriteOutput</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb,
+                                 <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  fwrite(ptr, size, nmemb, stream);
+  <B><FONT COLOR="#A020F0">return</FONT></B> (nmemb*size);
+}
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">SyncTime_CURL_WriteHeader</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb,
+                                 <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B>   i, RetVal;
+  <B><FONT COLOR="#228B22">char</FONT></B>  TmpStr1[26], TmpStr2[26];
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(ShowAllHeader == 1)
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, (<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr));
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(strncmp((<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr), <B><FONT COLOR="#BC8F8F">&quot;Date:&quot;</FONT></B>, 5) == 0) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(ShowAllHeader == 0)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;HTTP Server. %s&quot;</FONT></B>, (<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr));
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(AutoSyncTime == 1) {
+      *TmpStr1 = 0;
+      *TmpStr2 = 0;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strlen((<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr)) &gt; 50) <I><FONT COLOR="#B22222">/* Can prevent buffer overflow to
+                                         TmpStr1 &amp; 2? */ </FONT></I>
+        AutoSyncTime = 0;
+      <B><FONT COLOR="#A020F0">else</FONT></B> {
+        RetVal = sscanf((<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr), <B><FONT COLOR="#BC8F8F">&quot;Date: %s %hu %s %hu %hu:%hu:%hu&quot;</FONT></B>,
+                        TmpStr1, &amp;SYSTime.wDay, TmpStr2, &amp;SYSTime.wYear,
+                        &amp;SYSTime.wHour, &amp;SYSTime.wMinute, &amp;SYSTime.wSecond);
+&nbsp;
+        <B><FONT COLOR="#A020F0">if</FONT></B>(RetVal == 7) {
+          SYSTime.wMilliseconds = 500;    <I><FONT COLOR="#B22222">/* adjust to midpoint, 0.5 sec */ </FONT></I>
+          <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;12; i++) {
+            <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(MthStr[i], TmpStr2) == 0) {
+              SYSTime.wMonth = i + 1;
+              <B><FONT COLOR="#A020F0">break</FONT></B>;
+            }
+          }
+          AutoSyncTime = 3;       <I><FONT COLOR="#B22222">/* Computer clock will be adjusted */ </FONT></I>
+        }
+        <B><FONT COLOR="#A020F0">else</FONT></B> {
+          AutoSyncTime = 0;       <I><FONT COLOR="#B22222">/* Error in sscanf() fields conversion */ </FONT></I>
+        }
+      }
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(strncmp((<B><FONT COLOR="#228B22">char</FONT></B> *)(ptr), <B><FONT COLOR="#BC8F8F">&quot;X-Cache: HIT&quot;</FONT></B>, 12) == 0) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;ERROR: HTTP Server data is cached.&quot;</FONT></B>
+            <B><FONT COLOR="#BC8F8F">&quot; Server Date is no longer valid.\n&quot;</FONT></B>);
+    AutoSyncTime = 0;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> (nmemb*size);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">SyncTime_CURL_Init</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">char</FONT></B> *proxy_port,
+                        <B><FONT COLOR="#228B22">char</FONT></B> *proxy_user_password)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(strlen(proxy_port) &gt; 0)
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PROXY.html">CURLOPT_PROXY</a>, proxy_port);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(strlen(proxy_user_password) &gt; 0)
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PROXYUSERPWD.html">CURLOPT_PROXYUSERPWD</a>, proxy_user_password);
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">SYNCTIME_UA</FONT>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_USERAGENT.html">CURLOPT_USERAGENT</a>, SYNCTIME_UA);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, *SyncTime_CURL_WriteOutput);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HEADERFUNCTION.html">CURLOPT_HEADERFUNCTION</a>, *SyncTime_CURL_WriteHeader);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">SyncTime_CURL_Fetch</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">char</FONT></B> *URL_Str, <B><FONT COLOR="#228B22">char</FONT></B> *OutFileName,
+                        <B><FONT COLOR="#228B22">int</FONT></B> HttpGetBody)
+{
+  FILE *outfile;
+  CURLcode res;
+&nbsp;
+  outfile = NULL;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(HttpGetBody == HTTP_COMMAND_HEAD)
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a>, 1L);
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    outfile = fopen(OutFileName, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, outfile);
+  }
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, URL_Str);
+  res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(outfile != NULL)
+    fclose(outfile);
+  <B><FONT COLOR="#A020F0">return</FONT></B> res;  <I><FONT COLOR="#B22222">/* (CURLE_OK) */ </FONT></I>
+}
+&nbsp;
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">showUsage</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;SYNCTIME: Synchronising computer clock with time server&quot;</FONT></B>
+          <B><FONT COLOR="#BC8F8F">&quot; using HTTP protocol.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Usage   : SYNCTIME [Option]\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Options :\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --server=WEBSERVER        Use this time server instead&quot;</FONT></B>
+          <B><FONT COLOR="#BC8F8F">&quot; of default.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --showall                 Show all HTTP header.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --synctime                Synchronising computer clock&quot;</FONT></B>
+          <B><FONT COLOR="#BC8F8F">&quot; with time server.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --proxy-user=USER[:PASS]  Set proxy username and&quot;</FONT></B>
+          <B><FONT COLOR="#BC8F8F">&quot; password.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --proxy=HOST[:PORT]       Use HTTP proxy on given&quot;</FONT></B>
+          <B><FONT COLOR="#BC8F8F">&quot; port.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot; --help                    Print this help.\n&quot;</FONT></B>);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">return</FONT></B>;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">conf_init</FONT></B>(conf_t *conf)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+&nbsp;
+  *conf-&gt;http_proxy       = 0;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;MAX_STRING1; i++)
+    conf-&gt;proxy_user[i]     = 0;    <I><FONT COLOR="#B22222">/* Clean up password from memory */ </FONT></I>
+  *conf-&gt;timeserver       = 0;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  CURL    *curl;
+  conf_t  conf[1];
+  <B><FONT COLOR="#228B22">int</FONT></B>     OptionIndex;
+  <B><FONT COLOR="#228B22">struct</FONT></B>  tm *lt;
+  <B><FONT COLOR="#228B22">struct</FONT></B>  tm *gmt;
+  time_t  tt;
+  time_t  tt_local;
+  time_t  tt_gmt;
+  <B><FONT COLOR="#228B22">double</FONT></B>  tzonediffFloat;
+  <B><FONT COLOR="#228B22">int</FONT></B>     tzonediffWord;
+  <B><FONT COLOR="#228B22">char</FONT></B>    timeBuf[61];
+  <B><FONT COLOR="#228B22">char</FONT></B>    tzoneBuf[16];
+  <B><FONT COLOR="#228B22">int</FONT></B>     RetValue;
+&nbsp;
+  OptionIndex     = 0;
+  ShowAllHeader   = 0;    <I><FONT COLOR="#B22222">/* Do not show HTTP Header */ </FONT></I>
+  AutoSyncTime    = 0;    <I><FONT COLOR="#B22222">/* Do not synchronise computer clock */ </FONT></I>
+  RetValue        = 0;    <I><FONT COLOR="#B22222">/* Successful Exit */ </FONT></I>
+  conf_init(conf);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &gt; 1) {
+    <B><FONT COLOR="#A020F0">while</FONT></B>(OptionIndex &lt; argc) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strncmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--server=&quot;</FONT></B>, 9) == 0)
+        snprintf(conf-&gt;timeserver, MAX_STRING, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, &amp;argv[OptionIndex][9]);
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--showall&quot;</FONT></B>) == 0)
+        ShowAllHeader = 1;
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--synctime&quot;</FONT></B>) == 0)
+        AutoSyncTime = 1;
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strncmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--proxy-user=&quot;</FONT></B>, 13) == 0)
+        snprintf(conf-&gt;proxy_user, MAX_STRING, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, &amp;argv[OptionIndex][13]);
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(strncmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--proxy=&quot;</FONT></B>, 8) == 0)
+        snprintf(conf-&gt;http_proxy, MAX_STRING, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, &amp;argv[OptionIndex][8]);
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>((strcmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;--help&quot;</FONT></B>) == 0) ||
+          (strcmp(argv[OptionIndex], <B><FONT COLOR="#BC8F8F">&quot;/?&quot;</FONT></B>) == 0)) {
+        showUsage();
+        <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+      }
+      OptionIndex++;
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(*conf-&gt;timeserver == 0)     <I><FONT COLOR="#B22222">/* Use default server for time information */ </FONT></I>
+    snprintf(conf-&gt;timeserver, MAX_STRING, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, DefaultTimeServer[0]);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Init CURL before usage */ </FONT></I>
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    SyncTime_CURL_Init(curl, conf-&gt;http_proxy, conf-&gt;proxy_user);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Calculating time diff between GMT and localtime */ </FONT></I>
+    tt       = time(0);
+    lt       = localtime(&amp;tt);
+    tt_local = mktime(lt);
+    gmt      = gmtime(&amp;tt);
+    tt_gmt   = mktime(gmt);
+    tzonediffFloat = difftime(tt_local, tt_gmt);
+    tzonediffWord  = (<B><FONT COLOR="#228B22">int</FONT></B>)(tzonediffFloat/3600.0);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>((<B><FONT COLOR="#228B22">double</FONT></B>)(tzonediffWord * 3600) == tzonediffFloat)
+      snprintf(tzoneBuf, 15, <B><FONT COLOR="#BC8F8F">&quot;%+03d'00'&quot;</FONT></B>, tzonediffWord);
+    <B><FONT COLOR="#A020F0">else</FONT></B>
+      snprintf(tzoneBuf, 15, <B><FONT COLOR="#BC8F8F">&quot;%+03d'30'&quot;</FONT></B>, tzonediffWord);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Get current system time and local time */ </FONT></I>
+    GetSystemTime(&amp;SYSTime);
+    GetLocalTime(&amp;LOCALTime);
+    snprintf(timeBuf, 60, <B><FONT COLOR="#BC8F8F">&quot;%s, %02d %s %04d %02d:%02d:%02d.%03d, &quot;</FONT></B>,
+             DayStr[LOCALTime.wDayOfWeek], LOCALTime.wDay,
+             MthStr[LOCALTime.wMonth-1], LOCALTime.wYear,
+             LOCALTime.wHour, LOCALTime.wMinute, LOCALTime.wSecond,
+             LOCALTime.wMilliseconds);
+&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Fetch: %s\n\n&quot;</FONT></B>, conf-&gt;timeserver);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Before HTTP. Date: %s%s\n\n&quot;</FONT></B>, timeBuf, tzoneBuf);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* HTTP HEAD command to the Webserver */ </FONT></I>
+    SyncTime_CURL_Fetch(curl, conf-&gt;timeserver, <B><FONT COLOR="#BC8F8F">&quot;index.htm&quot;</FONT></B>,
+                        HTTP_COMMAND_HEAD);
+&nbsp;
+    GetLocalTime(&amp;LOCALTime);
+    snprintf(timeBuf, 60, <B><FONT COLOR="#BC8F8F">&quot;%s, %02d %s %04d %02d:%02d:%02d.%03d, &quot;</FONT></B>,
+             DayStr[LOCALTime.wDayOfWeek], LOCALTime.wDay,
+             MthStr[LOCALTime.wMonth-1], LOCALTime.wYear,
+             LOCALTime.wHour, LOCALTime.wMinute, LOCALTime.wSecond,
+             LOCALTime.wMilliseconds);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;\nAfter  HTTP. Date: %s%s\n&quot;</FONT></B>, timeBuf, tzoneBuf);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(AutoSyncTime == 3) {
+      <I><FONT COLOR="#B22222">/* Synchronising computer clock */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(!SetSystemTime(&amp;SYSTime)) {  <I><FONT COLOR="#B22222">/* Set system time */ </FONT></I>
+        fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;ERROR: Unable to set system time.\n&quot;</FONT></B>);
+        RetValue = 1;
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B> {
+        <I><FONT COLOR="#B22222">/* Successfully re-adjusted computer clock */ </FONT></I>
+        GetLocalTime(&amp;LOCALTime);
+        snprintf(timeBuf, 60, <B><FONT COLOR="#BC8F8F">&quot;%s, %02d %s %04d %02d:%02d:%02d.%03d, &quot;</FONT></B>,
+                 DayStr[LOCALTime.wDayOfWeek], LOCALTime.wDay,
+                 MthStr[LOCALTime.wMonth-1], LOCALTime.wYear,
+                 LOCALTime.wHour, LOCALTime.wMinute, LOCALTime.wSecond,
+                 LOCALTime.wMilliseconds);
+        fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;\nNew System's Date: %s%s\n&quot;</FONT></B>, timeBuf, tzoneBuf);
+      }
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Cleanup before exit */ </FONT></I>
+    conf_init(conf);
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> RetValue;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - url2file.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>url2file.c</b></div>
+<h1> url2file.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/url2file.c">Download url2file.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Download a given URL into a local file named page.out.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_data</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+  <B><FONT COLOR="#A020F0">return</FONT></B> written;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  CURL *curl_handle;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *pagefilename = <B><FONT COLOR="#BC8F8F">&quot;page.out&quot;</FONT></B>;
+  FILE *pagefile;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &lt; 2) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Usage: %s &lt;URL&gt;\n&quot;</FONT></B>, argv[0]);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* init the curl session */ </FONT></I>
+  curl_handle = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set URL to get here */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, argv[1]);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Switch on full protocol/debug output while testing */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* disable progress meter, set to 0L to enable and disable debug output */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* send all data to this function  */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_data);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* open the file */ </FONT></I>
+  pagefile = fopen(pagefilename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(pagefile) {
+&nbsp;
+    <I><FONT COLOR="#B22222">/* write the page body to this file handle */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, pagefile);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* get it! */ </FONT></I>
+    <a href="curl_easy_perform.html">curl_easy_perform</a>(curl_handle);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* close the header file */ </FONT></I>
+    fclose(pagefile);
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* cleanup curl stuff */ </FONT></I>
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl_handle);
+&nbsp;
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

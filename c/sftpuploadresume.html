@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - sftpuploadresume.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>sftpuploadresume.c</b></div>
+<h1> sftpuploadresume.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/sftpuploadresume.c">Download sftpuploadresume.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Upload to SFTP, resuming a previously aborted transfer.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* read data to upload */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">readfunc</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  FILE *f = (FILE *)stream;
+  size_t n;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(ferror(f))
+    <B><FONT COLOR="#A020F0">return</FONT></B> CURL_READFUNC_ABORT;
+&nbsp;
+  n = fread(ptr, size, nmemb, f) * size;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> n;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+ * sftpGetRemoteFileSize returns the remote file size in byte; -1 on error
+ */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> curl_off_t <B><FONT COLOR="#0000FF">sftpGetRemoteFileSize</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *i_remoteFile)
+{
+  CURLcode result = CURLE_GOT_NOTHING;
+  curl_off_t remoteFileSizeByte = -1;
+  CURL *curlHandlePtr = NULL;
+&nbsp;
+  curlHandlePtr = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, i_remoteFile);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a>, 1);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_HEADER.html">CURLOPT_HEADER</a>, 1);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlHandlePtr, <a href="CURLOPT_FILETIME.html">CURLOPT_FILETIME</a>, 1);
+&nbsp;
+  result = <a href="curl_easy_perform.html">curl_easy_perform</a>(curlHandlePtr);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(CURLE_OK == result) {
+    result = <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(curlHandlePtr,
+                               <a href="CURLINFO_CONTENT_LENGTH_DOWNLOAD_T.html">CURLINFO_CONTENT_LENGTH_DOWNLOAD_T</a>,
+                               &amp;remoteFileSizeByte);
+    printf(<B><FONT COLOR="#BC8F8F">&quot;filesize: %&quot;</FONT></B> CURL_FORMAT_CURL_OFF_T <B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>, remoteFileSizeByte);
+  }
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curlHandlePtr);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> remoteFileSizeByte;
+}
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">sftpResumeUpload</FONT></B>(CURL *curlhandle, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *remotepath,
+                            <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *localpath)
+{
+  FILE *f = NULL;
+  CURLcode result = CURLE_GOT_NOTHING;
+&nbsp;
+  curl_off_t remoteFileSizeByte = sftpGetRemoteFileSize(remotepath);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(-1 == remoteFileSizeByte) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Error reading the remote file size: unable to resume upload\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> -1;
+  }
+&nbsp;
+  f = fopen(localpath, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!f) {
+    perror(NULL);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, remotepath);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, readfunc);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, f);
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_WIN32</FONT>
+  _fseeki64(f, remoteFileSizeByte, SEEK_SET);
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+  fseek(f, (<B><FONT COLOR="#228B22">long</FONT></B>)remoteFileSizeByte, SEEK_SET);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_APPEND.html">CURLOPT_APPEND</a>, 1L);
+  result = <a href="curl_easy_perform.html">curl_easy_perform</a>(curlhandle);
+&nbsp;
+  fclose(f);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(result == CURLE_OK)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, <a href="curl_easy_strerror.html">curl_easy_strerror</a>(result));
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *remote = <B><FONT COLOR="#BC8F8F">&quot;sftp://user:pass@example.com/path/filename&quot;</FONT></B>;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *filename = <B><FONT COLOR="#BC8F8F">&quot;filename&quot;</FONT></B>;
+  CURL *curlhandle = NULL;
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  curlhandle = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!sftpResumeUpload(curlhandle, remote, filename)) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;resumed upload using curl %s failed\n&quot;</FONT></B>, <a href="curl_version.html">curl_version</a>());
+  }
+&nbsp;
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curlhandle);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

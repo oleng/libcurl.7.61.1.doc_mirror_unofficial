@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - sessioninfo.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>sessioninfo.c</b></div>
+<h1> sessioninfo.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/sessioninfo.c">Download sessioninfo.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2016, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Uses the <a href="CURLINFO_TLS_SESSION.html">CURLINFO_TLS_SESSION</a> data.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* Note that this example currently requires curl to be linked against
+   GnuTLS (and this program must also be linked against -lgnutls). */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;gnutls/gnutls.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> CURL *curl;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">wrfu</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> curl_tlssessioninfo *info;
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> cert_list_size;
+  <B><FONT COLOR="#228B22">const</FONT></B> gnutls_datum_t *chainp;
+  CURLcode res;
+&nbsp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)stream;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)ptr;
+&nbsp;
+  res = <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(curl, <a href="CURLINFO_TLS_SESSION.html">CURLINFO_TLS_SESSION</a>, &amp;info);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!res) {
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(info-&gt;backend) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLSSLBACKEND_GNUTLS</FONT></B>:
+      <I><FONT COLOR="#B22222">/* info-&gt;internals is now the gnutls_session_t */ </FONT></I>
+      chainp = gnutls_certificate_get_peers(info-&gt;internals, &amp;cert_list_size);
+      <B><FONT COLOR="#A020F0">if</FONT></B>((chainp) &amp;&amp; (cert_list_size)) {
+        <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> i;
+&nbsp;
+        <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i &lt; cert_list_size; i++) {
+          gnutls_x509_crt_t cert;
+          gnutls_datum_t dn;
+&nbsp;
+          <B><FONT COLOR="#A020F0">if</FONT></B>(GNUTLS_E_SUCCESS == gnutls_x509_crt_init(&amp;cert)) {
+            <B><FONT COLOR="#A020F0">if</FONT></B>(GNUTLS_E_SUCCESS ==
+               gnutls_x509_crt_import(cert, &amp;chainp[i], GNUTLS_X509_FMT_DER)) {
+              <B><FONT COLOR="#A020F0">if</FONT></B>(GNUTLS_E_SUCCESS ==
+                 gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_FULL, &amp;dn)) {
+                fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Certificate #%u: %.*s&quot;</FONT></B>, i, dn.size, dn.data);
+&nbsp;
+                gnutls_free(dn.data);
+              }
+            }
+&nbsp;
+            gnutls_x509_crt_deinit(cert);
+          }
+        }
+      }
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLSSLBACKEND_NONE</FONT></B>:
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> size * nmemb;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;https://www.example.com/&quot;</FONT></B>);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, wrfu);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 0L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, 0L);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 0L);
+&nbsp;
+    (<B><FONT COLOR="#228B22">void</FONT></B>) <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+&nbsp;
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - xmlstream.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>xmlstream.c</b></div>
+<h1> xmlstream.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/xmlstream.c">Download xmlstream.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Stream-parse a document using the streaming Expat parser.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* Written by David Strauss
+ *
+ * Expat =&gt; http://www.libexpat.org/
+ *
+ * gcc -Wall -I/usr/local/include xmlstream.c -lcurl -lexpat -o xmlstream
+ *
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;assert.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;expat.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> MemoryStruct {
+  <B><FONT COLOR="#228B22">char</FONT></B> *memory;
+  size_t size;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct {
+  <B><FONT COLOR="#228B22">int</FONT></B> ok;
+  size_t tags;
+  size_t depth;
+  <B><FONT COLOR="#228B22">struct</FONT></B> MemoryStruct characters;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">startElement</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *userData, <B><FONT COLOR="#228B22">const</FONT></B> XML_Char *name,
+                         <B><FONT COLOR="#228B22">const</FONT></B> XML_Char **atts)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *state = (<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *) userData;
+  state-&gt;tags++;
+  state-&gt;depth++;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Get a clean slate for reading in character data. */ </FONT></I>
+  free(state-&gt;characters.memory);
+  state-&gt;characters.memory = NULL;
+  state-&gt;characters.size = 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">characterDataHandler</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *userData, <B><FONT COLOR="#228B22">const</FONT></B> XML_Char *s, <B><FONT COLOR="#228B22">int</FONT></B> len)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *state = (<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *) userData;
+  <B><FONT COLOR="#228B22">struct</FONT></B> MemoryStruct *mem = &amp;state-&gt;characters;
+&nbsp;
+  mem-&gt;memory = realloc(mem-&gt;memory, mem-&gt;size + len + 1);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(mem-&gt;memory == NULL) {
+    <I><FONT COLOR="#B22222">/* Out of memory. */ </FONT></I>
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Not enough memory (realloc returned NULL).\n&quot;</FONT></B>);
+    state-&gt;ok = 0;
+    <B><FONT COLOR="#A020F0">return</FONT></B>;
+  }
+&nbsp;
+  memcpy(&amp;(mem-&gt;memory[mem-&gt;size]), s, len);
+  mem-&gt;size += len;
+  mem-&gt;memory[mem-&gt;size] = 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">endElement</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *userData, <B><FONT COLOR="#228B22">const</FONT></B> XML_Char *name)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *state = (<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *) userData;
+  state-&gt;depth--;
+&nbsp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;%5lu   %10lu   %s\n&quot;</FONT></B>, state-&gt;depth, state-&gt;characters.size, name);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">parseStreamCallback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *contents, size_t length, size_t nmemb,
+                                  <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  XML_Parser parser = (XML_Parser) userp;
+  size_t real_size = length * nmemb;
+  <B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *state = (<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct *) XML_GetUserData(parser);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Only parse if we're not already in a failure state. */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(state-&gt;ok &amp;&amp; XML_Parse(parser, contents, real_size, 0) == 0) {
+    <B><FONT COLOR="#228B22">int</FONT></B> error_code = XML_GetErrorCode(parser);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Parsing response buffer of length %lu failed&quot;</FONT></B>
+            <B><FONT COLOR="#BC8F8F">&quot; with error code %d (%s).\n&quot;</FONT></B>,
+            real_size, error_code, XML_ErrorString(error_code));
+    state-&gt;ok = 0;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> real_size;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl_handle;
+  CURLcode res;
+  XML_Parser parser;
+  <B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct state;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Initialize the state structure for parsing. */ </FONT></I>
+  memset(&amp;state, 0, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(<B><FONT COLOR="#228B22">struct</FONT></B> ParserStruct));
+  state.ok = 1;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Initialize a namespace-aware parser. */ </FONT></I>
+  parser = XML_ParserCreateNS(NULL, <B><FONT COLOR="#BC8F8F">'\0'</FONT></B>);
+  XML_SetUserData(parser, &amp;state);
+  XML_SetElementHandler(parser, startElement, endElement);
+  XML_SetCharacterDataHandler(parser, characterDataHandler);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Initialize a libcurl handle. */ </FONT></I>
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+  curl_handle = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>,
+                   <B><FONT COLOR="#BC8F8F">&quot;http://www.w3schools.com/xml/simple.xml&quot;</FONT></B>);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, parseStreamCallback);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl_handle, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, (<B><FONT COLOR="#228B22">void</FONT></B> *)parser);
+&nbsp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;Depth   Characters   Closing Tag\n&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Perform the request and any follow-up parsing. */ </FONT></I>
+  res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl_handle);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+            <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(state.ok) {
+    <I><FONT COLOR="#B22222">/* Expat requires one final call to finalize parsing. */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(XML_Parse(parser, NULL, 0, 1) == 0) {
+      <B><FONT COLOR="#228B22">int</FONT></B> error_code = XML_GetErrorCode(parser);
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Finalizing parsing failed with error code %d (%s).\n&quot;</FONT></B>,
+              error_code, XML_ErrorString(error_code));
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      printf(<B><FONT COLOR="#BC8F8F">&quot;                     --------------\n&quot;</FONT></B>);
+      printf(<B><FONT COLOR="#BC8F8F">&quot;                     %lu tags total\n&quot;</FONT></B>, state.tags);
+    }
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Clean up. */ </FONT></I>
+  free(state.characters.memory);
+  XML_ParserFree(parser);
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl_handle);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>
