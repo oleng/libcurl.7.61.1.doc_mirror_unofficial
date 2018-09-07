@@ -1,0 +1,82 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_RESOLVE</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_RESOLVE</b></div>
+<h1> CURLOPT_RESOLVE explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_RESOLVE - provide custom host name to IP address resolves <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_RESOLVE,
+&nbsp;                         struct curl_slist *hosts);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to a linked list of strings with host name resolve information to use for requests with this handle. The linked list should be a fully valid list of <span Class="bold">struct curl_slist</span> structs properly filled in. Use <a Class="emphasis" href="curl_slist_append.html">curl_slist_append</a> to create the list and <a Class="emphasis" href="curl_slist_free_all.html">curl_slist_free_all</a> to clean up an entire list.
+<p class="level0">Each single name resolve string should be written using the format HOST:PORT:ADDRESS[,ADDRESS]... where HOST is the name libcurl will try to resolve, PORT is the port number of the service where libcurl wants to connect to the HOST and ADDRESS is one or more numerical IP addresses. If you specify multiple ip addresses they need to be separated by comma. If libcurl is built to support IPv6, each of the ADDRESS entries can of course be either IPv4 or IPv6 style addressing.
+<p class="level0">This option effectively pre-populates the DNS cache with entries for the host+port pair so redirects and everything that operations against the HOST+PORT will instead use your provided ADDRESS. Addresses set with <a Class="emphasis" href="CURLOPT_RESOLVE.html">CURLOPT_RESOLVE</a> will not time-out from the DNS cache like ordinary entries.
+<p class="level0">If the DNS cache already have an entry for the given host+port pair, then this entry will be removed and a new entry will be created. This is because old entry may have have different addresses or be ordinary entries with time-outs.
+<p class="level0">The provided ADDRESS set by this option will be used even if <a Class="emphasis" href="CURLOPT_IPRESOLVE.html">CURLOPT_IPRESOLVE</a> is set to make libcurl use another IP version.
+<p class="level0">Remove names from the DNS cache again, to stop providing these fake resolves, by including a string in the linked list that uses the format "-HOST:PORT". The host name must be prefixed with a dash, and the host name and port number must exactly match what was already added previously.
+<p class="level0">Support for providing the ADDRESS within [brackets] was added in 7.57.0.
+<p class="level0">Support for providing multiple IP addresses per entry was added in 7.59.0. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl;
+struct curl_slist *host = NULL;
+host = curl_slist_append(NULL, "example.com:80:127.0.0.1");
+&nbsp;
+curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_RESOLVE, host);
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+&nbsp;
+&nbsp; curl_easy_perform(curl);
+&nbsp;
+&nbsp; /* always cleanup */
+&nbsp; curl_easy_cleanup(curl);
+}
+&nbsp;
+curl_slist_free_all(host);
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.21.3. Removal support added in 7.42.0. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_IPRESOLVE.html">CURLOPT_IPRESOLVE</a>, <a Class="manpage" href="CURLOPT_DNS_CACHE_TIMEOUT.html">CURLOPT_DNS_CACHE_TIMEOUT</a>, <a Class="manpage" href="CURLOPT_CONNECT_TO.html">CURLOPT_CONNECT_TO</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

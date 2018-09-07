@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_SHARE</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_SHARE</b></div>
+<h1> CURLOPT_SHARE explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_SHARE - specify share handle to use <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_SHARE, CURLSH *share); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a <span Class="emphasis">share</span> handle as a parameter. The share handle must have been created by a previous call to <a Class="emphasis" href="curl_share_init.html">curl_share_init</a>. Setting this option, will make this curl handle use the data from the shared handle instead of keeping the data to itself. This enables several curl handles to share data. If the curl handles are used simultaneously in multiple threads, you <span Class="bold">MUST</span> use the locking methods in the share handle. See <a Class="emphasis" href="curl_share_setopt.html">curl_share_setopt</a> for details.
+<p class="level0">If you add a share that is set to share cookies, your easy handle will use that cookie cache and get the cookie engine enabled. If you unshare an object that was using cookies (or change to another object that doesn't share cookies), the easy handle will get its cookie engine disabled.
+<p class="level0">Data that the share object is not set to share will be dealt with the usual way, as if no share was used.
+<p class="level0">Set this option to NULL again to stop using that share object. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+CURL *curl2 = curl_easy_init(); /* a second handle */
+if(curl) {
+&nbsp; CURLSH *shobject = curl_share_init();
+&nbsp; curl_share_setopt(shobject, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+&nbsp;
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+&nbsp; curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
+&nbsp; curl_easy_setopt(curl, CURLOPT_SHARE, shobject);
+&nbsp; ret = curl_easy_perform(curl);
+&nbsp; curl_easy_cleanup(curl);
+&nbsp;
+&nbsp; /* the second handle shares cookies from the first */
+&nbsp; curl_easy_setopt(curl2, CURLOPT_URL, "https://example.com/second");
+&nbsp; curl_easy_setopt(curl2, CURLOPT_COOKIEFILE, "");
+&nbsp; curl_easy_setopt(curl2, CURLOPT_SHARE, shobject);
+&nbsp; ret = curl_easy_perform(curl2);
+&nbsp; curl_easy_cleanup(curl2);
+&nbsp;
+&nbsp; curl_share_cleanup(shobject);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Always <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_COOKIE.html">CURLOPT_COOKIE</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_SSH_KEYFUNCTION</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_SSH_KEYFUNCTION</b></div>
+<h1> CURLOPT_SSH_KEYFUNCTION explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_SSH_KEYFUNCTION - callback for known host matching logic <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+enum curl_khstat {
+&nbsp; CURLKHSTAT_FINE_ADD_TO_FILE,
+&nbsp; CURLKHSTAT_FINE,
+&nbsp; CURLKHSTAT_REJECT, /* reject the connection, return an error */
+&nbsp; CURLKHSTAT_DEFER,  /* do not accept it, but we can't answer right
+&nbsp;                       now so this causes a <a href="libcurl-errors.html#CURLEDEFER">CURLE_DEFER</a> error but
+&nbsp;                       otherwise the connection will be left intact
+&nbsp;                       etc */
+};
+&nbsp;
+enum curl_khmatch {
+&nbsp; CURLKHMATCH_OK,       /* match */
+&nbsp; CURLKHMATCH_MISMATCH, /* host found, key mismatch! */
+&nbsp; CURLKHMATCH_MISSING,  /* no matching host/key found */
+};
+&nbsp;
+struct curl_khkey {
+&nbsp; const char *key; /* points to a zero-terminated string encoded with
+&nbsp;                     base64 if len is zero, otherwise to the "raw"
+&nbsp;                     data */
+&nbsp; size_t len;
+&nbsp; enum curl_khtype keytype;
+};
+&nbsp;
+int ssh_keycallback(CURL *easy,
+&nbsp;                   const struct curl_khkey *knownkey,
+&nbsp;                   const struct curl_khkey *foundkey,
+&nbsp;                   enum curl_khmatch,
+&nbsp;                   void *clientp);
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_SSH_KEYFUNCTION,
+&nbsp;                         ssh_keycallback);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to your callback function, which should match the prototype shown above.
+<p class="level0">It gets called when the known_host matching has been done, to allow the application to act and decide for libcurl how to proceed. The callback will only be called if <a Class="emphasis" href="CURLOPT_SSH_KNOWNHOSTS.html">CURLOPT_SSH_KNOWNHOSTS</a> is also set.
+<p class="level0">This callback function gets passed the CURL handle, the key from the known_hosts file <span Class="emphasis">knownkey</span>, the key from the remote site <span Class="emphasis">foundkey</span>, info from libcurl on the matching status and a custom pointer (set with <a Class="emphasis" href="CURLOPT_SSH_KEYDATA.html">CURLOPT_SSH_KEYDATA</a>). It MUST return one of the following return codes to tell libcurl how to act:
+<p class="level0">
+<p class="level0"><a name="CURLKHSTATFINEADDTOFILE"></a><span class="nroffip">CURLKHSTAT_FINE_ADD_TO_FILE</span>
+<p class="level1">The host+key is accepted and libcurl will append it to the known_hosts file before continuing with the connection. This will also add the host+key combo to the known_host pool kept in memory if it wasn't already present there. The adding of data to the file is done by completely replacing the file with a new copy, so the permissions of the file must allow this.
+<p class="level0"><a name="CURLKHSTATFINE"></a><span class="nroffip">CURLKHSTAT_FINE</span>
+<p class="level1">The host+key is accepted libcurl will continue with the connection. This will also add the host+key combo to the known_host pool kept in memory if it wasn't already present there.
+<p class="level0"><a name="CURLKHSTATREJECT"></a><span class="nroffip">CURLKHSTAT_REJECT</span>
+<p class="level1">The host+key is rejected. libcurl will deny the connection to continue and it will be closed.
+<p class="level0"><a name="CURLKHSTATDEFER"></a><span class="nroffip">CURLKHSTAT_DEFER</span>
+<p class="level1">The host+key is rejected, but the SSH connection is asked to be kept alive. This feature could be used when the app wants to somehow return back and act on the host+key situation and then retry without needing the overhead of setting it up from scratch again. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">SFTP and SCP <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+static int keycb(CURL *easy,
+&nbsp;                const struct curl_khkey *knownkey,
+&nbsp;                const struct curl_khkey *foundkey,
+&nbsp;                enum curl_khmatch,
+&nbsp;                void *clientp)
+{
+&nbsp; /* 'clientp' points to the callback_data struct */
+&nbsp; /* investigate the situation and return the correct value */
+&nbsp; return CURLKHSTAT_FINE_ADD_TO_FILE;
+}
+{
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "sftp://example.com/thisfile.txt");
+&nbsp; curl_easy_setopt(curl, CURLOPT_SSH_KEYFUNCTION, keycb);
+&nbsp; curl_easy_setopt(curl, CURLOPT_SSH_KEYDATA, &callback_data);
+&nbsp; curl_easy_setopt(curl, CURLOPT_SSH_KNOWNHOSTS, "/home/user/known_hosts");
+&nbsp;
+&nbsp; curl_easy_perform(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.19.6 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_SSH_KEYDATA.html">CURLOPT_SSH_KEYDATA</a>, <a Class="manpage" href="CURLOPT_SSH_KNOWNHOSTS.html">CURLOPT_SSH_KNOWNHOSTS</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>
