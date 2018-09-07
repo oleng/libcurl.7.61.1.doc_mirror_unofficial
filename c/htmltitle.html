@@ -1,0 +1,329 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - htmltitle.cpp</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>htmltitle.cpp</b></div>
+<h1> htmltitle.cpp </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/htmltitle.cpp">Download htmltitle.cpp raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Get a web page, extract the title with libxml.
+ * &lt;/DESC&gt;
+&nbsp;
+ Written by Lars Nilsson
+&nbsp;
+ GNU C++ compile command line suggestion (edit paths accordingly):
+&nbsp;
+ g++ -Wall -I/opt/curl/include -I/opt/libxml/include/libxml2 htmltitle.cpp \&nbsp;
+ -o htmltitle -L/opt/curl/lib -L/opt/libxml/lib -lcurl -lxml2
+*/ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;libxml/HTMLparser.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  Case-insensitive string comparison
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_MSC_VER</FONT>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <B><FONT COLOR="#0000FF">COMPARE</FONT></B>(a, b) (!_stricmp((a), (b)))
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <B><FONT COLOR="#0000FF">COMPARE</FONT></B>(a, b) (!strcasecmp((a), (b)))
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml callback context structure
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">struct</FONT></B> Context
+{
+  Context(): addTitle(false) { }
+&nbsp;
+  bool addTitle;
+  <B><FONT COLOR="#5F9EA0">std</FONT></B>::string title;
+};
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libcurl variables for error strings and returned data
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> errorBuffer[CURL_ERROR_SIZE];
+<B><FONT COLOR="#228B22">static</FONT></B> std::string buffer;
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libcurl write callback function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">writer</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *data, size_t size, size_t nmemb,
+                  <B><FONT COLOR="#5F9EA0">std</FONT></B>::string *writerData)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(writerData == NULL)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+  writerData-&gt;append(data, size*nmemb);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> size * nmemb;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libcurl connection initialization
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> bool <B><FONT COLOR="#0000FF">init</FONT></B>(CURL *&amp;conn, <B><FONT COLOR="#228B22">char</FONT></B> *url)
+{
+  CURLcode code;
+&nbsp;
+  conn = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(conn == NULL) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to create CURL connection\n&quot;</FONT></B>);
+    exit(EXIT_FAILURE);
+  }
+&nbsp;
+  code = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn, <a href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a>, errorBuffer);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to set error buffer [%d]\n&quot;</FONT></B>, code);
+    <B><FONT COLOR="#A020F0">return</FONT></B> false;
+  }
+&nbsp;
+  code = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to set URL [%s]\n&quot;</FONT></B>, errorBuffer);
+    <B><FONT COLOR="#A020F0">return</FONT></B> false;
+  }
+&nbsp;
+  code = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn, <a href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>, 1L);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to set redirect option [%s]\n&quot;</FONT></B>, errorBuffer);
+    <B><FONT COLOR="#A020F0">return</FONT></B> false;
+  }
+&nbsp;
+  code = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, writer);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to set writer [%s]\n&quot;</FONT></B>, errorBuffer);
+    <B><FONT COLOR="#A020F0">return</FONT></B> false;
+  }
+&nbsp;
+  code = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;buffer);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to set write data [%s]\n&quot;</FONT></B>, errorBuffer);
+    <B><FONT COLOR="#A020F0">return</FONT></B> false;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> true;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml start element callback function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">StartElement</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *voidContext,
+                         <B><FONT COLOR="#228B22">const</FONT></B> xmlChar *name,
+                         <B><FONT COLOR="#228B22">const</FONT></B> xmlChar **attributes)
+{
+  Context *context = (Context *)voidContext;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(COMPARE((<B><FONT COLOR="#228B22">char</FONT></B> *)name, <B><FONT COLOR="#BC8F8F">&quot;TITLE&quot;</FONT></B>)) {
+    context-&gt;title = <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>;
+    context-&gt;addTitle = true;
+  }
+  (<B><FONT COLOR="#228B22">void</FONT></B>) attributes;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml end element callback function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">EndElement</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *voidContext,
+                       <B><FONT COLOR="#228B22">const</FONT></B> xmlChar *name)
+{
+  Context *context = (Context *)voidContext;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(COMPARE((<B><FONT COLOR="#228B22">char</FONT></B> *)name, <B><FONT COLOR="#BC8F8F">&quot;TITLE&quot;</FONT></B>))
+    context-&gt;addTitle = false;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  Text handling helper function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">handleCharacters</FONT></B>(Context *context,
+                             <B><FONT COLOR="#228B22">const</FONT></B> xmlChar *chars,
+                             <B><FONT COLOR="#228B22">int</FONT></B> length)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(context-&gt;addTitle)
+    context-&gt;title.append((<B><FONT COLOR="#228B22">char</FONT></B> *)chars, length);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml PCDATA callback function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">Characters</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *voidContext,
+                       <B><FONT COLOR="#228B22">const</FONT></B> xmlChar *chars,
+                       <B><FONT COLOR="#228B22">int</FONT></B> length)
+{
+  Context *context = (Context *)voidContext;
+&nbsp;
+  handleCharacters(context, chars, length);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml CDATA callback function
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">cdata</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *voidContext,
+                  <B><FONT COLOR="#228B22">const</FONT></B> xmlChar *chars,
+                  <B><FONT COLOR="#228B22">int</FONT></B> length)
+{
+  Context *context = (Context *)voidContext;
+&nbsp;
+  handleCharacters(context, chars, length);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  libxml SAX callback structure
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> htmlSAXHandler saxHandler =
+{
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  StartElement,
+  EndElement,
+  NULL,
+  Characters,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  cdata,
+  NULL
+};
+&nbsp;
+<I><FONT COLOR="#B22222">//
+</FONT></I><I><FONT COLOR="#B22222">//  Parse given (assumed to be) HTML text and return the title
+</FONT></I><I><FONT COLOR="#B22222">//
+</FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">parseHtml</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> std::string &amp;html,
+                      <B><FONT COLOR="#5F9EA0">std</FONT></B>::string &amp;title)
+{
+  htmlParserCtxtPtr ctxt;
+  Context context;
+&nbsp;
+  ctxt = htmlCreatePushParserCtxt(&amp;saxHandler, &amp;context, <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>, 0, <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>,
+                                  XML_CHAR_ENCODING_NONE);
+&nbsp;
+  htmlParseChunk(ctxt, html.c_str(), html.size(), 0);
+  htmlParseChunk(ctxt, <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>, 0, 1);
+&nbsp;
+  htmlFreeParserCtxt(ctxt);
+&nbsp;
+  title = context.title;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  CURL *conn = NULL;
+  CURLcode code;
+  <B><FONT COLOR="#5F9EA0">std</FONT></B>::string title;
+&nbsp;
+  <I><FONT COLOR="#B22222">// Ensure one argument is given
+</FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc != 2) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Usage: %s &lt;url&gt;\n&quot;</FONT></B>, argv[0]);
+    exit(EXIT_FAILURE);
+  }
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+&nbsp;
+  <I><FONT COLOR="#B22222">// Initialize CURL connection
+</FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!init(conn, argv[1])) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Connection initializion failed\n&quot;</FONT></B>);
+    exit(EXIT_FAILURE);
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">// Retrieve content for the URL
+</FONT></I>
+  code = <a href="curl_easy_perform.html">curl_easy_perform</a>(conn);
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(conn);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(code != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Failed to get '%s' [%s]\n&quot;</FONT></B>, argv[1], errorBuffer);
+    exit(EXIT_FAILURE);
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">// Parse the (assumed) HTML code
+</FONT></I>  parseHtml(buffer, title);
+&nbsp;
+  <I><FONT COLOR="#B22222">// Display the extracted title
+</FONT></I>  printf(<B><FONT COLOR="#BC8F8F">&quot;Title: %s\n&quot;</FONT></B>, title.c_str());
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> EXIT_SUCCESS;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

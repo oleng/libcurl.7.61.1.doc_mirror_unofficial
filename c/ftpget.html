@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - ftpget.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>ftpget.c</b></div>
+<h1> ftpget.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/ftpget.c">Download ftpget.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Get a single file from an FTP server.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> FtpFile {
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *filename;
+  FILE *stream;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">my_fwrite</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *buffer, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> FtpFile *out = (<B><FONT COLOR="#228B22">struct</FONT></B> FtpFile *)stream;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(out &amp;&amp; !out-&gt;stream) {
+    <I><FONT COLOR="#B22222">/* open file for writing */ </FONT></I>
+    out-&gt;stream = fopen(out-&gt;filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!out-&gt;stream)
+      <B><FONT COLOR="#A020F0">return</FONT></B> -1; <I><FONT COLOR="#B22222">/* failure, can't open file to write */ </FONT></I>
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> fwrite(buffer, size, nmemb, out-&gt;stream);
+}
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res;
+  <B><FONT COLOR="#228B22">struct</FONT></B> FtpFile ftpfile = {
+    <B><FONT COLOR="#BC8F8F">&quot;curl.tar.gz&quot;</FONT></B>, <I><FONT COLOR="#B22222">/* name to store the file as if successful */ </FONT></I>
+    NULL
+  };
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/*
+     * You better replace the URL with one that works!
+     */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>,
+                     <B><FONT COLOR="#BC8F8F">&quot;ftp://ftp.example.com/curl/curl-7.9.2.tar.gz&quot;</FONT></B>);
+    <I><FONT COLOR="#B22222">/* Define our callback to get called when there's data to be written */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, my_fwrite);
+    <I><FONT COLOR="#B22222">/* Set a pointer to our struct to pass to the callback */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;ftpfile);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Switch on full protocol/debug output */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(CURLE_OK != res) {
+      <I><FONT COLOR="#B22222">/* we failed */ </FONT></I>
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;curl told us %d\n&quot;</FONT></B>, res);
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(ftpfile.stream)
+    fclose(ftpfile.stream); <I><FONT COLOR="#B22222">/* close the local file */ </FONT></I>
+&nbsp;
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

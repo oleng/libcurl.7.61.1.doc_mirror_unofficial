@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - ftpupload.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>ftpupload.c</b></div>
+<h1> ftpupload.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/ftpupload.c">Download ftpupload.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/types.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/stat.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;fcntl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;errno.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">WIN32</FONT>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;io.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Performs an FTP upload and renames the file just after a successful
+ * transfer.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">LOCAL_FILE</FONT>      <B><FONT COLOR="#BC8F8F">&quot;/tmp/uploadthis.txt&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">UPLOAD_FILE_AS</FONT>  <B><FONT COLOR="#BC8F8F">&quot;while-uploading.txt&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">REMOTE_URL</FONT>      <B><FONT COLOR="#BC8F8F">&quot;ftp://example.com/&quot;</FONT></B>  UPLOAD_FILE_AS
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">RENAME_FILE_TO</FONT>  <B><FONT COLOR="#BC8F8F">&quot;renamed-and-fine.txt&quot;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* NOTE: if you want this example to work on Windows with libcurl as a
+   DLL, you MUST also provide a read callback with <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>.
+   Failing to do so will give you a crash since a DLL may not use the
+   variable's memory when passed in to it from an app like this. */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">read_callback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  curl_off_t nread;
+  <I><FONT COLOR="#B22222">/* in real-world cases, this would probably get this data differently
+     as this fread() stuff is exactly what the library already would do
+     by default internally */ </FONT></I>
+  size_t retcode = fread(ptr, size, nmemb, stream);
+&nbsp;
+  nread = (curl_off_t)retcode;
+&nbsp;
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;*** We read %&quot;</FONT></B> CURL_FORMAT_CURL_OFF_T
+          <B><FONT COLOR="#BC8F8F">&quot; bytes from file\n&quot;</FONT></B>, nread);
+  <B><FONT COLOR="#A020F0">return</FONT></B> retcode;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res;
+  FILE *hd_src;
+  <B><FONT COLOR="#228B22">struct</FONT></B> stat file_info;
+  curl_off_t fsize;
+&nbsp;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *headerlist = NULL;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> buf_1 [] = <B><FONT COLOR="#BC8F8F">&quot;RNFR &quot;</FONT></B> UPLOAD_FILE_AS;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> buf_2 [] = <B><FONT COLOR="#BC8F8F">&quot;RNTO &quot;</FONT></B> RENAME_FILE_TO;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get the file size of the local file */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(stat(LOCAL_FILE, &amp;file_info)) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Couldn't open '%s': %s\n&quot;</FONT></B>, LOCAL_FILE, strerror(errno));
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+  fsize = (curl_off_t)file_info.st_size;
+&nbsp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;Local file size: %&quot;</FONT></B> CURL_FORMAT_CURL_OFF_T <B><FONT COLOR="#BC8F8F">&quot; bytes.\n&quot;</FONT></B>, fsize);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get a FILE * of the same file */ </FONT></I>
+  hd_src = fopen(LOCAL_FILE, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* In windows, this will init the winsock stuff */ </FONT></I>
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get a curl handle */ </FONT></I>
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* build a list of commands to pass to libcurl */ </FONT></I>
+    headerlist = <a href="curl_slist_append.html">curl_slist_append</a>(headerlist, buf_1);
+    headerlist = <a href="curl_slist_append.html">curl_slist_append</a>(headerlist, buf_2);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* we want to use our own read function */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, read_callback);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* enable uploading */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* specify target */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, REMOTE_URL);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* pass in that last of FTP commands to run after the transfer */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_POSTQUOTE.html">CURLOPT_POSTQUOTE</a>, headerlist);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* now specify which file to upload */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, hd_src);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Set the size of the file to upload (optional).  If you give a *_LARGE
+       option you MUST make sure that the type of the passed-in argument is a
+       curl_off_t. If you use <a href="CURLOPT_INFILESIZE.html">CURLOPT_INFILESIZE</a> (without _LARGE) you must
+       make sure that to pass in a type 'long' argument. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_INFILESIZE_LARGE.html">CURLOPT_INFILESIZE_LARGE</a>,
+                     (curl_off_t)fsize);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Now run off and do what you've been told! */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* clean up the FTP commands list */ </FONT></I>
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(headerlist);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+  fclose(hd_src); <I><FONT COLOR="#B22222">/* close the local file */ </FONT></I>
+&nbsp;
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

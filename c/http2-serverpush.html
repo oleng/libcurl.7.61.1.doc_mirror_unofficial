@@ -1,0 +1,358 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - http2-serverpush.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>http2-serverpush.c</b></div>
+<h1> http2-serverpush.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/http2-serverpush.c">Download http2-serverpush.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * HTTP/2 server push
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* somewhat unix-specific */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/time.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* curl stuff */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifndef</FONT></B> <FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT>
+#<B ><FONT COLOR="#5F9EA0">error</FONT></B> <B><FONT COLOR="#BC8F8F">&quot;too old libcurl, can't do HTTP/2 server push!&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B>
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">dump</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *text, <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *ptr, size_t size,
+          <B><FONT COLOR="#228B22">char</FONT></B> nohex)
+{
+  size_t i;
+  size_t c;
+&nbsp;
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> width = 0x10;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(nohex)
+    <I><FONT COLOR="#B22222">/* without the hex output, we can fit more on screen */ </FONT></I>
+    width = 0x40;
+&nbsp;
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s, %lu bytes (0x%lx)\n&quot;</FONT></B>,
+          text, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)size, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)size);
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;size; i += width) {
+&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%4.4lx: &quot;</FONT></B>, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)i);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!nohex) {
+      <I><FONT COLOR="#B22222">/* hex not disabled, show it */ </FONT></I>
+      <B><FONT COLOR="#A020F0">for</FONT></B>(c = 0; c &lt; width; c++)
+        <B><FONT COLOR="#A020F0">if</FONT></B>(i + c &lt; size)
+          fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%02x &quot;</FONT></B>, ptr[i + c]);
+        <B><FONT COLOR="#A020F0">else</FONT></B>
+          fputs(<B><FONT COLOR="#BC8F8F">&quot;   &quot;</FONT></B>, stderr);
+    }
+&nbsp;
+    <B><FONT COLOR="#A020F0">for</FONT></B>(c = 0; (c &lt; width) &amp;&amp; (i + c &lt; size); c++) {
+      <I><FONT COLOR="#B22222">/* check for 0D0A; if found, skip past and start a new line of output */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(nohex &amp;&amp; (i + c + 1 &lt; size) &amp;&amp; ptr[i + c] == 0x0D &amp;&amp;
+         ptr[i + c + 1] == 0x0A) {
+        i += (c + 2 - width);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%c&quot;</FONT></B>,
+              (ptr[i + c] &gt;= 0x20) &amp;&amp; (ptr[i + c]&lt;0x80)?ptr[i + c]:<B><FONT COLOR="#BC8F8F">'.'</FONT></B>);
+      <I><FONT COLOR="#B22222">/* check again for 0D0A, to avoid an extra \n if it's at width */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(nohex &amp;&amp; (i + c + 2 &lt; size) &amp;&amp; ptr[i + c + 1] == 0x0D &amp;&amp;
+         ptr[i + c + 2] == 0x0A) {
+        i += (c + 3 - width);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+    }
+    fputc(<B><FONT COLOR="#BC8F8F">'\n'</FONT></B>, stderr); <I><FONT COLOR="#B22222">/* newline */ </FONT></I>
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">my_trace</FONT></B>(CURL *handle, curl_infotype type,
+             <B><FONT COLOR="#228B22">char</FONT></B> *data, size_t size,
+             <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *text;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)handle; <I><FONT COLOR="#B22222">/* prevent compiler warning */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)userp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_TEXT.html">CURLINFO_TEXT</a></FONT></B>:
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;== Info: %s&quot;</FONT></B>, data);
+    <I><FONT COLOR="#B22222">/* FALLTHROUGH */ </FONT></I>
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* in case a new one is introduced to shock us */ </FONT></I>
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_HEADER_OUT.html">CURLINFO_HEADER_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send header&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_DATA_OUT.html">CURLINFO_DATA_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_SSL_DATA_OUT.html">CURLINFO_SSL_DATA_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send SSL data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_HEADER_IN.html">CURLINFO_HEADER_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv header&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_DATA_IN.html">CURLINFO_DATA_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_SSL_DATA_IN.html">CURLINFO_SSL_DATA_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv SSL data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+&nbsp;
+  dump(text, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *)data, size, 1);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">OUTPUTFILE</FONT> <B><FONT COLOR="#BC8F8F">&quot;dl&quot;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">setup</FONT></B>(CURL *hnd)
+{
+  FILE *out = fopen(OUTPUTFILE, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* write to this file */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, out);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set the same URL */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;https://localhost:8443/index.html&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* please be verbose */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_DEBUGFUNCTION.html">CURLOPT_DEBUGFUNCTION</a>, my_trace);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* HTTP/2 please */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_HTTP_VERSION.html">CURLOPT_HTTP_VERSION</a>, CURL_HTTP_VERSION_2_0);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we use a self-signed test server, skip verification during debugging */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 0L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, 0L);
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">if</FONT></B> (<FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT> &gt; 0)
+  <I><FONT COLOR="#B22222">/* wait for pipe connection to confirm */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_PIPEWAIT.html">CURLOPT_PIPEWAIT</a>, 1L);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* called when there's an incoming push */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">server_push_callback</FONT></B>(CURL *parent,
+                                CURL *easy,
+                                size_t num_headers,
+                                <B><FONT COLOR="#228B22">struct</FONT></B> curl_pushheaders *headers,
+                                <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *headp;
+  size_t i;
+  <B><FONT COLOR="#228B22">int</FONT></B> *transfers = (<B><FONT COLOR="#228B22">int</FONT></B> *)userp;
+  <B><FONT COLOR="#228B22">char</FONT></B> filename[128];
+  FILE *out;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> count = 0;
+&nbsp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)parent; <I><FONT COLOR="#B22222">/* we have no use for this */ </FONT></I>
+&nbsp;
+  snprintf(filename, 128, <B><FONT COLOR="#BC8F8F">&quot;push%u&quot;</FONT></B>, count++);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* here's a new stream, save it in a new file for each new push */ </FONT></I>
+  out = fopen(filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* write to this file */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(easy, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, out);
+&nbsp;
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;**** push callback approves stream %u, got %lu headers!\n&quot;</FONT></B>,
+          count, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)num_headers);
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;num_headers; i++) {
+    headp = <a href="https://curl.haxx.se/libcurl/c/curl_pushheader_bynum.html">curl_pushheader_bynum</a>(headers, i);
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;**** header %lu: %s\n&quot;</FONT></B>, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)i, headp);
+  }
+&nbsp;
+  headp = <a href="https://curl.haxx.se/libcurl/c/curl_pushheader_byname.html">curl_pushheader_byname</a>(headers, <B><FONT COLOR="#BC8F8F">&quot;:path&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(headp) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;**** The PATH is %s\n&quot;</FONT></B>, headp <I><FONT COLOR="#B22222">/* skip :path + colon */ </FONT></I>);
+  }
+&nbsp;
+  (*transfers)++; <I><FONT COLOR="#B22222">/* one more */ </FONT></I>
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURL_PUSH_OK;
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+ * Download a file over HTTP/2, take care of server push.
+ */ </FONT></I>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *easy;
+  CURLM *multi_handle;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running; <I><FONT COLOR="#B22222">/* keep number of running handles */ </FONT></I>
+  <B><FONT COLOR="#228B22">int</FONT></B> transfers = 1; <I><FONT COLOR="#B22222">/* we start with one */ </FONT></I>
+  <B><FONT COLOR="#228B22">struct</FONT></B> CURLMsg *m;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* init a multi stack */ </FONT></I>
+  multi_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+&nbsp;
+  easy = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set options */ </FONT></I>
+  setup(easy);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* add the easy transfer */ </FONT></I>
+  <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, easy);
+&nbsp;
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_PIPELINING.html">CURLMOPT_PIPELINING</a>, CURLPIPE_MULTIPLEX);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_PUSHFUNCTION.html">CURLMOPT_PUSHFUNCTION</a>, server_push_callback);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_PUSHDATA.html">CURLMOPT_PUSHDATA</a>, &amp;transfers);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we start some action by calling perform right away */ </FONT></I>
+  <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+&nbsp;
+  <B><FONT COLOR="#A020F0">do</FONT></B> {
+    <B><FONT COLOR="#228B22">struct</FONT></B> timeval timeout;
+    <B><FONT COLOR="#228B22">int</FONT></B> rc; <I><FONT COLOR="#B22222">/* select() return code */ </FONT></I>
+    CURLMcode mc; <I><FONT COLOR="#B22222">/* <a href="curl_multi_fdset.html">curl_multi_fdset</a>() return code */ </FONT></I>
+&nbsp;
+    fd_set fdread;
+    fd_set fdwrite;
+    fd_set fdexcep;
+    <B><FONT COLOR="#228B22">int</FONT></B> maxfd = -1;
+&nbsp;
+    <B><FONT COLOR="#228B22">long</FONT></B> curl_timeo = -1;
+&nbsp;
+    FD_ZERO(&amp;fdread);
+    FD_ZERO(&amp;fdwrite);
+    FD_ZERO(&amp;fdexcep);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* set a suitable timeout to play around with */ </FONT></I>
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+&nbsp;
+    <a href="curl_multi_timeout.html">curl_multi_timeout</a>(multi_handle, &amp;curl_timeo);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(curl_timeo &gt;= 0) {
+      timeout.tv_sec = curl_timeo / 1000;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(timeout.tv_sec &gt; 1)
+        timeout.tv_sec = 1;
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        timeout.tv_usec = (curl_timeo % 1000) * 1000;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* get file descriptors from the transfers */ </FONT></I>
+    mc = <a href="curl_multi_fdset.html">curl_multi_fdset</a>(multi_handle, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;maxfd);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(mc != CURLM_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_multi_fdset.html">curl_multi_fdset</a>() failed, code %d.\n&quot;</FONT></B>, mc);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* On success the value of maxfd is guaranteed to be &gt;= -1. We call
+       select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+       no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+       to sleep 100ms, which is the minimum suggested value in the
+       <a href="curl_multi_fdset.html">curl_multi_fdset</a>() doc. */ </FONT></I>
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(maxfd == -1) {
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_WIN32</FONT>
+      Sleep(100);
+      rc = 0;
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+      <I><FONT COLOR="#B22222">/* Portable sleep for platforms other than Windows. */ </FONT></I>
+      <B><FONT COLOR="#228B22">struct</FONT></B> timeval wait = { 0, 100 * 1000 }; <I><FONT COLOR="#B22222">/* 100ms */ </FONT></I>
+      rc = select(0, NULL, NULL, NULL, &amp;wait);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      <I><FONT COLOR="#B22222">/* Note that on some platforms 'timeout' may be modified by select().
+         If you need access to the original value save a copy beforehand. */ </FONT></I>
+      rc = select(maxfd + 1, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;timeout);
+    }
+&nbsp;
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(rc) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">-1</FONT></B>:
+      <I><FONT COLOR="#B22222">/* select error */ </FONT></I>
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">0</FONT></B>:
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      <I><FONT COLOR="#B22222">/* timeout or readable/writable sockets */ </FONT></I>
+      <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/*
+     * A little caution when doing server push is that libcurl itself has
+     * created and added one or more easy handles but we need to clean them up
+     * when we are done.
+     */ </FONT></I>
+&nbsp;
+    <B><FONT COLOR="#A020F0">do</FONT></B> {
+      <B><FONT COLOR="#228B22">int</FONT></B> msgq = 0;;
+      m = <a href="curl_multi_info_read.html">curl_multi_info_read</a>(multi_handle, &amp;msgq);
+      <B><FONT COLOR="#A020F0">if</FONT></B>(m &amp;&amp; (m-&gt;msg == CURLMSG_DONE)) {
+        CURL *e = m-&gt;easy_handle;
+        transfers--;
+        <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(multi_handle, e);
+        <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(e);
+      }
+    } <B><FONT COLOR="#A020F0">while</FONT></B>(m);
+&nbsp;
+  } <B><FONT COLOR="#A020F0">while</FONT></B>(transfers); <I><FONT COLOR="#B22222">/* as long as we have transfers going */ </FONT></I>
+&nbsp;
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(multi_handle);
+&nbsp;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_SSL_SESSIONID_CACHE</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_SSL_SESSIONID_CACHE</b></div>
+<h1> CURLOPT_SSL_SESSIONID_CACHE explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_SSL_SESSIONID_CACHE - enable/disable use of the SSL session-ID cache <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_SSL_SESSIONID_CACHE,
+&nbsp;                        long enabled);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a long set to 0 to disable libcurl's use of SSL session-ID caching. Set this to 1 to enable it. By default all transfers are done using the cache enabled. While nothing ever should get hurt by attempting to reuse SSL session-IDs, there seem to be or have been broken SSL implementations in the wild that may require you to disable this in order for you to succeed. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">1 <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All TLS-based <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+&nbsp; /* switch off session-id use! */
+&nbsp; curl_easy_setopt(curl, CURLOPT_SSL_SESSIONID_CACHE, 0L);
+&nbsp; ret = curl_easy_perform(curl);
+&nbsp; curl_easy_cleanup(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.16.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_DNS_CACHE_TIMEOUT.html">CURLOPT_DNS_CACHE_TIMEOUT</a>, <a Class="manpage" href="CURLOPT_SSLVERSION.html">CURLOPT_SSLVERSION</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

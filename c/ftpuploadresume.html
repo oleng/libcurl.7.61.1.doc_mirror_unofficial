@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - ftpuploadresume.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>ftpuploadresume.c</b></div>
+<h1> ftpuploadresume.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/ftpuploadresume.c">Download ftpuploadresume.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Upload to FTP, resuming failed transfers.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* parse headers for Content-Length */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">getcontentlengthfunc</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb,
+                                   <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> r;
+  <B><FONT COLOR="#228B22">long</FONT></B> len = 0;
+&nbsp;
+  r = sscanf(ptr, <B><FONT COLOR="#BC8F8F">&quot;Content-Length: %ld\n&quot;</FONT></B>, &amp;len);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(r)
+    *((<B><FONT COLOR="#228B22">long</FONT></B> *) stream) = len;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> size * nmemb;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* discard downloaded data */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">discardfunc</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  (<B><FONT COLOR="#228B22">void</FONT></B>)ptr;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)stream;
+  <B><FONT COLOR="#A020F0">return</FONT></B> size * nmemb;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* read data to upload */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">readfunc</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  FILE *f = stream;
+  size_t n;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(ferror(f))
+    <B><FONT COLOR="#A020F0">return</FONT></B> CURL_READFUNC_ABORT;
+&nbsp;
+  n = fread(ptr, size, nmemb, f) * size;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> n;
+}
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">upload</FONT></B>(CURL *curlhandle, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *remotepath,
+                  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *localpath, <B><FONT COLOR="#228B22">long</FONT></B> timeout, <B><FONT COLOR="#228B22">long</FONT></B> tries)
+{
+  FILE *f;
+  <B><FONT COLOR="#228B22">long</FONT></B> uploaded_len = 0;
+  CURLcode r = CURLE_GOT_NOTHING;
+  <B><FONT COLOR="#228B22">int</FONT></B> c;
+&nbsp;
+  f = fopen(localpath, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!f) {
+    perror(NULL);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>, 1L);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, remotepath);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(timeout)
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_FTP_RESPONSE_TIMEOUT.html">CURLOPT_FTP_RESPONSE_TIMEOUT</a>, timeout);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_HEADERFUNCTION.html">CURLOPT_HEADERFUNCTION</a>, getcontentlengthfunc);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_HEADERDATA.html">CURLOPT_HEADERDATA</a>, &amp;uploaded_len);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, discardfunc);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, readfunc);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, f);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* disable passive mode */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_FTPPORT.html">CURLOPT_FTPPORT</a>, <B><FONT COLOR="#BC8F8F">&quot;-&quot;</FONT></B>);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_FTP_CREATE_MISSING_DIRS.html">CURLOPT_FTP_CREATE_MISSING_DIRS</a>, 1L);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(c = 0; (r != CURLE_OK) &amp;&amp; (c &lt; tries); c++) {
+    <I><FONT COLOR="#B22222">/* are we resuming? */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(c) { <I><FONT COLOR="#B22222">/* yes */ </FONT></I>
+      <I><FONT COLOR="#B22222">/* determine the length of the file already written */ </FONT></I>
+&nbsp;
+      <I><FONT COLOR="#B22222">/*
+       * With NOBODY and NOHEADER, libcurl will issue a SIZE
+       * command, but the only way to retrieve the result is
+       * to parse the returned Content-Length header. Thus,
+       * getcontentlengthfunc(). We need discardfunc() above
+       * because HEADER will dump the headers to stdout
+       * without it.
+       */ </FONT></I>
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a>, 1L);
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_HEADER.html">CURLOPT_HEADER</a>, 1L);
+&nbsp;
+      r = <a href="curl_easy_perform.html">curl_easy_perform</a>(curlhandle);
+      <B><FONT COLOR="#A020F0">if</FONT></B>(r != CURLE_OK)
+        <B><FONT COLOR="#A020F0">continue</FONT></B>;
+&nbsp;
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a>, 0L);
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_HEADER.html">CURLOPT_HEADER</a>, 0L);
+&nbsp;
+      fseek(f, uploaded_len, SEEK_SET);
+&nbsp;
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_APPEND.html">CURLOPT_APPEND</a>, 1L);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> { <I><FONT COLOR="#B22222">/* no */ </FONT></I>
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curlhandle, <a href="CURLOPT_APPEND.html">CURLOPT_APPEND</a>, 0L);
+    }
+&nbsp;
+    r = <a href="curl_easy_perform.html">curl_easy_perform</a>(curlhandle);
+  }
+&nbsp;
+  fclose(f);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(r == CURLE_OK)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, <a href="curl_easy_strerror.html">curl_easy_strerror</a>(r));
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curlhandle = NULL;
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  curlhandle = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  upload(curlhandle, <B><FONT COLOR="#BC8F8F">&quot;ftp://user:pass@example.com/path/file&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;C:\\file&quot;</FONT></B>,
+         0, 3);
+&nbsp;
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curlhandle);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

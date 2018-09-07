@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_UNRESTRICTED_AUTH</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_UNRESTRICTED_AUTH</b></div>
+<h1> CURLOPT_UNRESTRICTED_AUTH explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_UNRESTRICTED_AUTH - send credentials to other hosts too <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_UNRESTRICTED_AUTH,
+&nbsp;                         long goahead);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Set the long <span Class="emphasis">gohead</span> parameter to 1L to make libcurl continue to send authentication (user+password) credentials when following locations, even when hostname changed. This option is meaningful only when setting <a Class="emphasis" href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>.
+<p class="level0">By default, libcurl will only send given credentials to the initial host name as given in the original URL, to avoid leaking username + password to other sites. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">0 <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">HTTP <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+&nbsp; curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+&nbsp; curl_easy_setopt(curl, CURLOPT_UNRESTRICTED_AUTH, 1L);
+&nbsp; curl_easy_perform(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Along with HTTP <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if HTTP is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>, <a Class="manpage" href="CURLOPT_USERPWD.html">CURLOPT_USERPWD</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

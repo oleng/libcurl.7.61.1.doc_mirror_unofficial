@@ -1,0 +1,303 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>all options for curl_easy_setopt(3)</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">libcurl API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>all options</b></div>
+<h1> All curl_easy_setopt options listed </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_getinfo_options.html">info options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<p>
+ All existing options for <a href="curl_easy_setopt.html">curl_easy_setopt</a> in alphabetical order.
+<p>
+<table>
+<tr><td><a href="CURLOPT_ABSTRACT_UNIX_SOCKET.html">CURLOPT_ABSTRACT_UNIX_SOCKET</a></td><td> set an abstract Unix domain socket</td></tr>
+<tr><td><a href="CURLOPT_ACCEPTTIMEOUT_MS.html">CURLOPT_ACCEPTTIMEOUT_MS</a></td><td> timeout waiting for FTP server to connect back</td></tr>
+<tr><td><a href="CURLOPT_ACCEPT_ENCODING.html">CURLOPT_ACCEPT_ENCODING</a></td><td> enables automatic decompression of HTTP downloads</td></tr>
+<tr><td><a href="CURLOPT_ADDRESS_SCOPE.html">CURLOPT_ADDRESS_SCOPE</a></td><td> set scope for local IPv6 addresses</td></tr>
+<tr><td><a href="CURLOPT_APPEND.html">CURLOPT_APPEND</a></td><td> enable appending to the remote file</td></tr>
+<tr><td><a href="CURLOPT_AUTOREFERER.html">CURLOPT_AUTOREFERER</a></td><td> automatically update the referer header</td></tr>
+<tr><td><a href="CURLOPT_BUFFERSIZE.html">CURLOPT_BUFFERSIZE</a></td><td> set preferred receive buffer size</td></tr>
+<tr><td><a href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a></td><td> path to Certificate Authority (CA) bundle</td></tr>
+<tr><td><a href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a></td><td> specify directory holding CA certificates</td></tr>
+<tr><td><a href="CURLOPT_CERTINFO.html">CURLOPT_CERTINFO</a></td><td> request SSL certificate information</td></tr>
+<tr><td><a href="CURLOPT_CHUNK_BGN_FUNCTION.html">CURLOPT_CHUNK_BGN_FUNCTION</a></td><td> callback before a transfer with FTP wildcardmatch</td></tr>
+<tr><td><a href="CURLOPT_CHUNK_DATA.html">CURLOPT_CHUNK_DATA</a></td><td> custom pointer to the FTP chunk callbacks</td></tr>
+<tr><td><a href="CURLOPT_CHUNK_END_FUNCTION.html">CURLOPT_CHUNK_END_FUNCTION</a></td><td> callback after a transfer with FTP wildcardmatch</td></tr>
+<tr><td><a href="CURLOPT_CLOSESOCKETDATA.html">CURLOPT_CLOSESOCKETDATA</a></td><td> pointer passed to the socket close callback</td></tr>
+<tr><td><a href="CURLOPT_CLOSESOCKETFUNCTION.html">CURLOPT_CLOSESOCKETFUNCTION</a></td><td> callback to socket close replacement function</td></tr>
+<tr><td><a href="CURLOPT_CONNECTTIMEOUT.html">CURLOPT_CONNECTTIMEOUT</a></td><td> timeout for the connect phase</td></tr>
+<tr><td><a href="CURLOPT_CONNECTTIMEOUT_MS.html">CURLOPT_CONNECTTIMEOUT_MS</a></td><td> timeout for the connect phase</td></tr>
+<tr><td><a href="CURLOPT_CONNECT_ONLY.html">CURLOPT_CONNECT_ONLY</a></td><td> stop when connected to target server</td></tr>
+<tr><td><a href="CURLOPT_CONNECT_TO.html">CURLOPT_CONNECT_TO</a></td><td> Connect to a specific host and port instead of the URL's host and port</td></tr>
+<tr><td><a href="CURLOPT_CONV_FROM_NETWORK_FUNCTION.html">CURLOPT_CONV_FROM_NETWORK_FUNCTION</a></td><td> convert data from network to host encoding</td></tr>
+<tr><td><a href="CURLOPT_CONV_FROM_UTF8_FUNCTION.html">CURLOPT_CONV_FROM_UTF8_FUNCTION</a></td><td> convert data from UTF8 to host encoding</td></tr>
+<tr><td><a href="CURLOPT_CONV_TO_NETWORK_FUNCTION.html">CURLOPT_CONV_TO_NETWORK_FUNCTION</a></td><td> convert data to network from host encoding</td></tr>
+<tr><td><a href="CURLOPT_COOKIE.html">CURLOPT_COOKIE</a></td><td> set contents of HTTP Cookie header</td></tr>
+<tr><td><a href="CURLOPT_COOKIEFILE.html">CURLOPT_COOKIEFILE</a></td><td> file name to read cookies from</td></tr>
+<tr><td><a href="CURLOPT_COOKIEJAR.html">CURLOPT_COOKIEJAR</a></td><td> file name to store cookies to</td></tr>
+<tr><td><a href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a></td><td> add to or manipulate cookies held in memory</td></tr>
+<tr><td><a href="CURLOPT_COOKIESESSION.html">CURLOPT_COOKIESESSION</a></td><td> start a new cookie session</td></tr>
+<tr><td><a href="CURLOPT_COPYPOSTFIELDS.html">CURLOPT_COPYPOSTFIELDS</a></td><td> have libcurl copy data to POST</td></tr>
+<tr><td><a href="CURLOPT_CRLF.html">CURLOPT_CRLF</a></td><td> enable/disable CRLF conversion</td></tr>
+<tr><td><a href="CURLOPT_CRLFILE.html">CURLOPT_CRLFILE</a></td><td> specify a Certificate Revocation List file</td></tr>
+<tr><td><a href="CURLOPT_CUSTOMREQUEST.html">CURLOPT_CUSTOMREQUEST</a></td><td> custom string for request</td></tr>
+<tr><td><a href="CURLOPT_DEBUGDATA.html">CURLOPT_DEBUGDATA</a></td><td> custom pointer for debug callback</td></tr>
+<tr><td><a href="CURLOPT_DEBUGFUNCTION.html">CURLOPT_DEBUGFUNCTION</a></td><td> debug callback</td></tr>
+<tr><td><a href="CURLOPT_DEFAULT_PROTOCOL.html">CURLOPT_DEFAULT_PROTOCOL</a></td><td> default protocol to use if the URL is missing a</td></tr>
+<tr><td><a href="CURLOPT_DIRLISTONLY.html">CURLOPT_DIRLISTONLY</a></td><td> ask for names only in a directory listing</td></tr>
+<tr><td><a href="CURLOPT_DISALLOW_USERNAME_IN_URL.html">CURLOPT_DISALLOW_USERNAME_IN_URL</a></td><td> disallow specifying username in the url</td></tr>
+<tr><td><a href="CURLOPT_DNS_CACHE_TIMEOUT.html">CURLOPT_DNS_CACHE_TIMEOUT</a></td><td> set life-time for DNS cache entries</td></tr>
+<tr><td><a href="CURLOPT_DNS_INTERFACE.html">CURLOPT_DNS_INTERFACE</a></td><td> set interface to speak DNS over</td></tr>
+<tr><td><a href="CURLOPT_DNS_LOCAL_IP4.html">CURLOPT_DNS_LOCAL_IP4</a></td><td> IPv4 address to bind DNS resolves to</td></tr>
+<tr><td><a href="CURLOPT_DNS_LOCAL_IP6.html">CURLOPT_DNS_LOCAL_IP6</a></td><td> IPv6 address to bind DNS resolves to</td></tr>
+<tr><td><a href="CURLOPT_DNS_SERVERS.html">CURLOPT_DNS_SERVERS</a></td><td> set preferred DNS servers</td></tr>
+<tr><td><a href="CURLOPT_DNS_SHUFFLE_ADDRESSES.html">CURLOPT_DNS_SHUFFLE_ADDRESSES</a></td><td> Shuffle addresses when a hostname returns more than one</td></tr>
+<tr><td><a href="CURLOPT_DNS_USE_GLOBAL_CACHE.html">CURLOPT_DNS_USE_GLOBAL_CACHE</a></td><td> enable/disable global DNS cache</td></tr>
+<tr><td><a href="CURLOPT_DOH_URL.html">CURLOPT_DOH_URL</a></td><td> provide the DNS-over-HTTPS URL</td></tr>
+<tr><td><a href="CURLOPT_EGDSOCKET.html">CURLOPT_EGDSOCKET</a></td><td> set EGD socket path</td></tr>
+<tr><td><a href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a></td><td> set error buffer for error messages</td></tr>
+<tr><td><a href="CURLOPT_EXPECT_100_TIMEOUT_MS.html">CURLOPT_EXPECT_100_TIMEOUT_MS</a></td><td> timeout for Expect: 100-continue response</td></tr>
+<tr><td><a href="CURLOPT_FAILONERROR.html">CURLOPT_FAILONERROR</a></td><td> request failure on HTTP response >= 400</td></tr>
+<tr><td><a href="CURLOPT_FILETIME.html">CURLOPT_FILETIME</a></td><td> get the modification time of the remote resource</td></tr>
+<tr><td><a href="CURLOPT_FNMATCH_DATA.html">CURLOPT_FNMATCH_DATA</a></td><td> custom pointer to fnmatch callback</td></tr>
+<tr><td><a href="CURLOPT_FNMATCH_FUNCTION.html">CURLOPT_FNMATCH_FUNCTION</a></td><td> wildcard matching function callback</td></tr>
+<tr><td><a href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a></td><td> follow HTTP 3xx redirects</td></tr>
+<tr><td><a href="CURLOPT_FORBID_REUSE.html">CURLOPT_FORBID_REUSE</a></td><td> make connection get closed at once after use</td></tr>
+<tr><td><a href="CURLOPT_FRESH_CONNECT.html">CURLOPT_FRESH_CONNECT</a></td><td> force a new connection to be used</td></tr>
+<tr><td><a href="CURLOPT_FTPPORT.html">CURLOPT_FTPPORT</a></td><td> make FTP transfer active</td></tr>
+<tr><td><a href="CURLOPT_FTPSSLAUTH.html">CURLOPT_FTPSSLAUTH</a></td><td> set order in which to attempt TLS vs SSL when using FTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_ACCOUNT.html">CURLOPT_FTP_ACCOUNT</a></td><td> set account info for FTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_ALTERNATIVE_TO_USER.html">CURLOPT_FTP_ALTERNATIVE_TO_USER</a></td><td> command to use instead of USER with FTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_CREATE_MISSING_DIRS.html">CURLOPT_FTP_CREATE_MISSING_DIRS</a></td><td> create missing dirs for FTP and SFTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_FILEMETHOD.html">CURLOPT_FTP_FILEMETHOD</a></td><td> select directory traversing method for FTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_RESPONSE_TIMEOUT.html">CURLOPT_FTP_RESPONSE_TIMEOUT</a></td><td> time allowed to wait for FTP response</td></tr>
+<tr><td><a href="CURLOPT_FTP_SKIP_PASV_IP.html">CURLOPT_FTP_SKIP_PASV_IP</a></td><td> ignore the IP address in the PASV response</td></tr>
+<tr><td><a href="CURLOPT_FTP_SSL_CCC.html">CURLOPT_FTP_SSL_CCC</a></td><td> switch off SSL again with FTP after auth</td></tr>
+<tr><td><a href="CURLOPT_FTP_USE_EPRT.html">CURLOPT_FTP_USE_EPRT</a></td><td> enable/disable use of EPRT with FTP</td></tr>
+<tr><td><a href="CURLOPT_FTP_USE_EPSV.html">CURLOPT_FTP_USE_EPSV</a></td><td> enable/disable use of EPSV</td></tr>
+<tr><td><a href="CURLOPT_FTP_USE_PRET.html">CURLOPT_FTP_USE_PRET</a></td><td> enable the PRET command</td></tr>
+<tr><td><a href="CURLOPT_GSSAPI_DELEGATION.html">CURLOPT_GSSAPI_DELEGATION</a></td><td> set allowed GSS-API delegation</td></tr>
+<tr><td><a href="CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.html">CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS</a></td><td> head start for ipv6 for happy eyeballs</td></tr>
+<tr><td><a href="CURLOPT_HAPROXYPROTOCOL.html">CURLOPT_HAPROXYPROTOCOL</a></td><td> send HAProxy PROXY protocol v1 header</td></tr>
+<tr><td><a href="CURLOPT_HEADER.html">CURLOPT_HEADER</a></td><td> pass headers to the data stream</td></tr>
+<tr><td><a href="CURLOPT_HEADERDATA.html">CURLOPT_HEADERDATA</a></td><td> pointer to pass to header callback</td></tr>
+<tr><td><a href="CURLOPT_HEADERFUNCTION.html">CURLOPT_HEADERFUNCTION</a></td><td> callback that receives header data</td></tr>
+<tr><td><a href="CURLOPT_HEADEROPT.html">CURLOPT_HEADEROPT</a></td><td> set how to send HTTP headers</td></tr>
+<tr><td><a href="CURLOPT_HTTP200ALIASES.html">CURLOPT_HTTP200ALIASES</a></td><td> specify alternative matches for HTTP 200 OK</td></tr>
+<tr><td><a href="CURLOPT_HTTPAUTH.html">CURLOPT_HTTPAUTH</a></td><td> set HTTP server authentication methods to try</td></tr>
+<tr><td><a href="CURLOPT_HTTPGET.html">CURLOPT_HTTPGET</a></td><td> ask for an HTTP GET request</td></tr>
+<tr><td><a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a></td><td> set custom HTTP headers</td></tr>
+<tr><td><a href="CURLOPT_HTTPPOST.html">CURLOPT_HTTPPOST</a></td><td> specify the multipart formpost content</td></tr>
+<tr><td><a href="CURLOPT_HTTPPROXYTUNNEL.html">CURLOPT_HTTPPROXYTUNNEL</a></td><td> tunnel through HTTP proxy</td></tr>
+<tr><td><a href="CURLOPT_HTTP_CONTENT_DECODING.html">CURLOPT_HTTP_CONTENT_DECODING</a></td><td> enable/disable HTTP content decoding</td></tr>
+<tr><td><a href="CURLOPT_HTTP_TRANSFER_DECODING.html">CURLOPT_HTTP_TRANSFER_DECODING</a></td><td> enable/disable HTTP transfer decoding</td></tr>
+<tr><td><a href="CURLOPT_HTTP_VERSION.html">CURLOPT_HTTP_VERSION</a></td><td> specify HTTP protocol version to use</td></tr>
+<tr><td><a href="CURLOPT_IGNORE_CONTENT_LENGTH.html">CURLOPT_IGNORE_CONTENT_LENGTH</a></td><td> ignore content length</td></tr>
+<tr><td><a href="CURLOPT_INFILESIZE.html">CURLOPT_INFILESIZE</a></td><td> set size of the input file to send off</td></tr>
+<tr><td><a href="CURLOPT_INFILESIZE_LARGE.html">CURLOPT_INFILESIZE_LARGE</a></td><td> set size of the input file to send off</td></tr>
+<tr><td><a href="CURLOPT_INTERFACE.html">CURLOPT_INTERFACE</a></td><td> source interface for outgoing traffic</td></tr>
+<tr><td><a href="CURLOPT_INTERLEAVEDATA.html">CURLOPT_INTERLEAVEDATA</a></td><td> custom pointer passed to RTSP interleave callback</td></tr>
+<tr><td><a href="CURLOPT_INTERLEAVEFUNCTION.html">CURLOPT_INTERLEAVEFUNCTION</a></td><td> callback function for RTSP interleaved data</td></tr>
+<tr><td><a href="CURLOPT_IOCTLDATA.html">CURLOPT_IOCTLDATA</a></td><td> custom pointer passed to I/O callback</td></tr>
+<tr><td><a href="CURLOPT_IOCTLFUNCTION.html">CURLOPT_IOCTLFUNCTION</a></td><td> callback for I/O operations</td></tr>
+<tr><td><a href="CURLOPT_IPRESOLVE.html">CURLOPT_IPRESOLVE</a></td><td> specify which IP protocol version to use</td></tr>
+<tr><td><a href="CURLOPT_ISSUERCERT.html">CURLOPT_ISSUERCERT</a></td><td> issuer SSL certificate filename</td></tr>
+<tr><td><a href="CURLOPT_KEEP_SENDING_ON_ERROR.html">CURLOPT_KEEP_SENDING_ON_ERROR</a></td><td> keep sending on early HTTP response >= 300</td></tr>
+<tr><td><a href="CURLOPT_KEYPASSWD.html">CURLOPT_KEYPASSWD</a></td><td> set passphrase to private key</td></tr>
+<tr><td><a href="CURLOPT_KRBLEVEL.html">CURLOPT_KRBLEVEL</a></td><td> set FTP kerberos security level</td></tr>
+<tr><td><a href="CURLOPT_LOCALPORT.html">CURLOPT_LOCALPORT</a></td><td> set local port number to use for socket</td></tr>
+<tr><td><a href="CURLOPT_LOCALPORTRANGE.html">CURLOPT_LOCALPORTRANGE</a></td><td> number of additional local ports to try</td></tr>
+<tr><td><a href="CURLOPT_LOGIN_OPTIONS.html">CURLOPT_LOGIN_OPTIONS</a></td><td> set login options</td></tr>
+<tr><td><a href="CURLOPT_LOW_SPEED_LIMIT.html">CURLOPT_LOW_SPEED_LIMIT</a></td><td> set low speed limit in bytes per second</td></tr>
+<tr><td><a href="CURLOPT_LOW_SPEED_TIME.html">CURLOPT_LOW_SPEED_TIME</a></td><td> set low speed limit time period</td></tr>
+<tr><td><a href="CURLOPT_MAIL_AUTH.html">CURLOPT_MAIL_AUTH</a></td><td> SMTP authentication address</td></tr>
+<tr><td><a href="CURLOPT_MAIL_FROM.html">CURLOPT_MAIL_FROM</a></td><td> SMTP sender address</td></tr>
+<tr><td><a href="CURLOPT_MAIL_RCPT.html">CURLOPT_MAIL_RCPT</a></td><td> list of SMTP mail recipients</td></tr>
+<tr><td><a href="CURLOPT_MAXCONNECTS.html">CURLOPT_MAXCONNECTS</a></td><td> maximum connection cache size</td></tr>
+<tr><td><a href="CURLOPT_MAXFILESIZE.html">CURLOPT_MAXFILESIZE</a></td><td> maximum file size allowed to download</td></tr>
+<tr><td><a href="CURLOPT_MAXFILESIZE_LARGE.html">CURLOPT_MAXFILESIZE_LARGE</a></td><td> maximum file size allowed to download</td></tr>
+<tr><td><a href="CURLOPT_MAXREDIRS.html">CURLOPT_MAXREDIRS</a></td><td> maximum number of redirects allowed</td></tr>
+<tr><td><a href="CURLOPT_MAX_RECV_SPEED_LARGE.html">CURLOPT_MAX_RECV_SPEED_LARGE</a></td><td> rate limit data download speed</td></tr>
+<tr><td><a href="CURLOPT_MAX_SEND_SPEED_LARGE.html">CURLOPT_MAX_SEND_SPEED_LARGE</a></td><td> rate limit data upload speed</td></tr>
+<tr><td><a href="CURLOPT_MIMEPOST.html">CURLOPT_MIMEPOST</a></td><td> set post/send data from mime structure</td></tr>
+<tr><td><a href="CURLOPT_NETRC.html">CURLOPT_NETRC</a></td><td> request that .netrc is used</td></tr>
+<tr><td><a href="CURLOPT_NETRC_FILE.html">CURLOPT_NETRC_FILE</a></td><td> file name to read .netrc info from</td></tr>
+<tr><td><a href="CURLOPT_NEW_DIRECTORY_PERMS.html">CURLOPT_NEW_DIRECTORY_PERMS</a></td><td> permissions for remotely created directories</td></tr>
+<tr><td><a href="CURLOPT_NEW_FILE_PERMS.html">CURLOPT_NEW_FILE_PERMS</a></td><td> permissions for remotely created files</td></tr>
+<tr><td><a href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a></td><td> do the download request without getting the body</td></tr>
+<tr><td><a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a></td><td> switch off the progress meter</td></tr>
+<tr><td><a href="CURLOPT_NOPROXY.html">CURLOPT_NOPROXY</a></td><td> disable proxy use for specific hosts</td></tr>
+<tr><td><a href="CURLOPT_NOSIGNAL.html">CURLOPT_NOSIGNAL</a></td><td> skip all signal handling</td></tr>
+<tr><td><a href="CURLOPT_OPENSOCKETDATA.html">CURLOPT_OPENSOCKETDATA</a></td><td> custom pointer passed to open socket callback</td></tr>
+<tr><td><a href="CURLOPT_OPENSOCKETFUNCTION.html">CURLOPT_OPENSOCKETFUNCTION</a></td><td> set callback for opening sockets</td></tr>
+<tr><td><a href="CURLOPT_PASSWORD.html">CURLOPT_PASSWORD</a></td><td> password to use in authentication</td></tr>
+<tr><td><a href="CURLOPT_PATH_AS_IS.html">CURLOPT_PATH_AS_IS</a></td><td> do not handle dot dot sequences</td></tr>
+<tr><td><a href="CURLOPT_PINNEDPUBLICKEY.html">CURLOPT_PINNEDPUBLICKEY</a></td><td> set pinned public key</td></tr>
+<tr><td><a href="CURLOPT_PIPEWAIT.html">CURLOPT_PIPEWAIT</a></td><td> wait for pipelining/multiplexing</td></tr>
+<tr><td><a href="CURLOPT_PORT.html">CURLOPT_PORT</a></td><td> set remote port number to work with</td></tr>
+<tr><td><a href="CURLOPT_POST.html">CURLOPT_POST</a></td><td> request an HTTP POST</td></tr>
+<tr><td><a href="CURLOPT_POSTFIELDS.html">CURLOPT_POSTFIELDS</a></td><td> specify data to POST to server</td></tr>
+<tr><td><a href="CURLOPT_POSTFIELDSIZE.html">CURLOPT_POSTFIELDSIZE</a></td><td> size of POST data pointed to</td></tr>
+<tr><td><a href="CURLOPT_POSTFIELDSIZE_LARGE.html">CURLOPT_POSTFIELDSIZE_LARGE</a></td><td> size of POST data pointed to</td></tr>
+<tr><td><a href="CURLOPT_POSTQUOTE.html">CURLOPT_POSTQUOTE</a></td><td> (S)FTP commands to run after the transfer</td></tr>
+<tr><td><a href="CURLOPT_POSTREDIR.html">CURLOPT_POSTREDIR</a></td><td> how to act on an HTTP POST redirect</td></tr>
+<tr><td><a href="CURLOPT_PREQUOTE.html">CURLOPT_PREQUOTE</a></td><td> commands to run before an FTP transfer</td></tr>
+<tr><td><a href="CURLOPT_PRE_PROXY.html">CURLOPT_PRE_PROXY</a></td><td> set pre-proxy to use</td></tr>
+<tr><td><a href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a></td><td> store a private pointer</td></tr>
+<tr><td><a href="CURLOPT_PROGRESSDATA.html">CURLOPT_PROGRESSDATA</a></td><td> custom pointer passed to the progress callback</td></tr>
+<tr><td><a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a></td><td> callback to progress meter function</td></tr>
+<tr><td><a href="CURLOPT_PROTOCOLS.html">CURLOPT_PROTOCOLS</a></td><td> set allowed protocols</td></tr>
+<tr><td><a href="CURLOPT_PROXY.html">CURLOPT_PROXY</a></td><td> set proxy to use</td></tr>
+<tr><td><a href="CURLOPT_PROXYAUTH.html">CURLOPT_PROXYAUTH</a></td><td> set HTTP proxy authentication methods to try</td></tr>
+<tr><td><a href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a></td><td> custom HTTP headers to pass to proxy</td></tr>
+<tr><td><a href="CURLOPT_PROXYPASSWORD.html">CURLOPT_PROXYPASSWORD</a></td><td> password to use with proxy authentication</td></tr>
+<tr><td><a href="CURLOPT_PROXYPORT.html">CURLOPT_PROXYPORT</a></td><td> port number the proxy listens on</td></tr>
+<tr><td><a href="CURLOPT_PROXYTYPE.html">CURLOPT_PROXYTYPE</a></td><td> proxy protocol type</td></tr>
+<tr><td><a href="CURLOPT_PROXYUSERNAME.html">CURLOPT_PROXYUSERNAME</a></td><td> user name to use for proxy authentication</td></tr>
+<tr><td><a href="CURLOPT_PROXYUSERPWD.html">CURLOPT_PROXYUSERPWD</a></td><td> user name and password to use for proxy authentication</td></tr>
+<tr><td><a href="CURLOPT_PROXY_CAINFO.html">CURLOPT_PROXY_CAINFO</a></td><td> path to proxy Certificate Authority (CA) bundle</td></tr>
+<tr><td><a href="CURLOPT_PROXY_CAPATH.html">CURLOPT_PROXY_CAPATH</a></td><td> specify directory holding proxy CA certificates</td></tr>
+<tr><td><a href="CURLOPT_PROXY_CRLFILE.html">CURLOPT_PROXY_CRLFILE</a></td><td> specify a proxy Certificate Revocation List file</td></tr>
+<tr><td><a href="CURLOPT_PROXY_KEYPASSWD.html">CURLOPT_PROXY_KEYPASSWD</a></td><td> set passphrase to proxy private key</td></tr>
+<tr><td><a href="CURLOPT_PROXY_PINNEDPUBLICKEY.html">CURLOPT_PROXY_PINNEDPUBLICKEY</a></td><td> set pinned public key for https proxy</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SERVICE_NAME.html">CURLOPT_PROXY_SERVICE_NAME</a></td><td> proxy authentication service name</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSLCERT.html">CURLOPT_PROXY_SSLCERT</a></td><td> set SSL proxy client certificate</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSLCERTTYPE.html">CURLOPT_PROXY_SSLCERTTYPE</a></td><td> specify type of the proxy client SSL certificate</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSLKEY.html">CURLOPT_PROXY_SSLKEY</a></td><td> specify private keyfile for TLS and SSL proxy client cert</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSLKEYTYPE.html">CURLOPT_PROXY_SSLKEYTYPE</a></td><td> set type of the proxy private key file</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSLVERSION.html">CURLOPT_PROXY_SSLVERSION</a></td><td> set preferred proxy TLS/SSL version</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSL_CIPHER_LIST.html">CURLOPT_PROXY_SSL_CIPHER_LIST</a></td><td> specify ciphers to use for proxy TLS</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSL_OPTIONS.html">CURLOPT_PROXY_SSL_OPTIONS</a></td><td> set proxy SSL behavior options</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSL_VERIFYHOST.html">CURLOPT_PROXY_SSL_VERIFYHOST</a></td><td> verify the proxy certificate's name against host</td></tr>
+<tr><td><a href="CURLOPT_PROXY_SSL_VERIFYPEER.html">CURLOPT_PROXY_SSL_VERIFYPEER</a></td><td> verify the proxy's SSL certificate</td></tr>
+<tr><td><a href="CURLOPT_PROXY_TLS13_CIPHERS.html">CURLOPT_PROXY_TLS13_CIPHERS</a></td><td> ciphers suites for proxy TLS 1.3</td></tr>
+<tr><td><a href="CURLOPT_PROXY_TLSAUTH_PASSWORD.html">CURLOPT_PROXY_TLSAUTH_PASSWORD</a></td><td> password to use for proxy TLS authentication</td></tr>
+<tr><td><a href="CURLOPT_PROXY_TLSAUTH_TYPE.html">CURLOPT_PROXY_TLSAUTH_TYPE</a></td><td> set proxy TLS authentication methods</td></tr>
+<tr><td><a href="CURLOPT_PROXY_TLSAUTH_USERNAME.html">CURLOPT_PROXY_TLSAUTH_USERNAME</a></td><td> user name to use for proxy TLS authentication</td></tr>
+<tr><td><a href="CURLOPT_PROXY_TRANSFER_MODE.html">CURLOPT_PROXY_TRANSFER_MODE</a></td><td> append FTP transfer mode to URL for proxy</td></tr>
+<tr><td><a href="CURLOPT_PUT.html">CURLOPT_PUT</a></td><td> make an HTTP PUT request</td></tr>
+<tr><td><a href="CURLOPT_QUOTE.html">CURLOPT_QUOTE</a></td><td> (S)FTP commands to run before transfer</td></tr>
+<tr><td><a href="CURLOPT_RANDOM_FILE.html">CURLOPT_RANDOM_FILE</a></td><td> specify a source for random data</td></tr>
+<tr><td><a href="CURLOPT_RANGE.html">CURLOPT_RANGE</a></td><td> set byte range to request</td></tr>
+<tr><td><a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a></td><td> custom pointer passed to the read callback</td></tr>
+<tr><td><a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a></td><td> read callback for data uploads</td></tr>
+<tr><td><a href="CURLOPT_REDIR_PROTOCOLS.html">CURLOPT_REDIR_PROTOCOLS</a></td><td> set protocols allowed to redirect to</td></tr>
+<tr><td><a href="CURLOPT_REFERER.html">CURLOPT_REFERER</a></td><td> set the HTTP referer header</td></tr>
+<tr><td><a href="CURLOPT_REQUEST_TARGET.html">CURLOPT_REQUEST_TARGET</a></td><td> specify an alternative target for this request</td></tr>
+<tr><td><a href="CURLOPT_RESOLVE.html">CURLOPT_RESOLVE</a></td><td> provide custom host name to IP address resolves</td></tr>
+<tr><td><a href="CURLOPT_RESOLVER_START_DATA.html">CURLOPT_RESOLVER_START_DATA</a></td><td> custom pointer passed to the resolver start callback</td></tr>
+<tr><td><a href="CURLOPT_RESOLVER_START_FUNCTION.html">CURLOPT_RESOLVER_START_FUNCTION</a></td><td> set callback to be called before a new resolve request is started</td></tr>
+<tr><td><a href="CURLOPT_RESUME_FROM.html">CURLOPT_RESUME_FROM</a></td><td> set a point to resume transfer from</td></tr>
+<tr><td><a href="CURLOPT_RESUME_FROM_LARGE.html">CURLOPT_RESUME_FROM_LARGE</a></td><td> set a point to resume transfer from</td></tr>
+<tr><td><a href="CURLOPT_RTSP_CLIENT_CSEQ.html">CURLOPT_RTSP_CLIENT_CSEQ</a></td><td> set the RTSP client CSEQ number</td></tr>
+<tr><td><a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a></td><td> specify RTSP request</td></tr>
+<tr><td><a href="CURLOPT_RTSP_SERVER_CSEQ.html">CURLOPT_RTSP_SERVER_CSEQ</a></td><td> set the RTSP server CSEQ number</td></tr>
+<tr><td><a href="CURLOPT_RTSP_SESSION_ID.html">CURLOPT_RTSP_SESSION_ID</a></td><td> set RTSP session ID</td></tr>
+<tr><td><a href="CURLOPT_RTSP_STREAM_URI.html">CURLOPT_RTSP_STREAM_URI</a></td><td> set RTSP stream URI</td></tr>
+<tr><td><a href="CURLOPT_RTSP_TRANSPORT.html">CURLOPT_RTSP_TRANSPORT</a></td><td> set RTSP Transport: header</td></tr>
+<tr><td><a href="CURLOPT_SASL_IR.html">CURLOPT_SASL_IR</a></td><td> enable sending initial response in first packet</td></tr>
+<tr><td><a href="CURLOPT_SEEKDATA.html">CURLOPT_SEEKDATA</a></td><td> custom pointer passed to the seek callback</td></tr>
+<tr><td><a href="CURLOPT_SEEKFUNCTION.html">CURLOPT_SEEKFUNCTION</a></td><td> user callback for seeking in input stream</td></tr>
+<tr><td><a href="CURLOPT_SERVICE_NAME.html">CURLOPT_SERVICE_NAME</a></td><td> authentication service name</td></tr>
+<tr><td><a href="CURLOPT_SHARE.html">CURLOPT_SHARE</a></td><td> specify share handle to use</td></tr>
+<tr><td><a href="CURLOPT_SOCKOPTDATA.html">CURLOPT_SOCKOPTDATA</a></td><td> custom pointer to pass to sockopt callback</td></tr>
+<tr><td><a href="CURLOPT_SOCKOPTFUNCTION.html">CURLOPT_SOCKOPTFUNCTION</a></td><td> set callback for setting socket options</td></tr>
+<tr><td><a href="CURLOPT_SOCKS5_AUTH.html">CURLOPT_SOCKS5_AUTH</a></td><td> set allowed methods for SOCKS5 proxy authentication</td></tr>
+<tr><td><a href="CURLOPT_SOCKS5_GSSAPI_NEC.html">CURLOPT_SOCKS5_GSSAPI_NEC</a></td><td> set socks proxy gssapi negotiation protection</td></tr>
+<tr><td><a href="CURLOPT_SOCKS5_GSSAPI_SERVICE.html">CURLOPT_SOCKS5_GSSAPI_SERVICE</a></td><td> SOCKS5 proxy authentication service name</td></tr>
+<tr><td><a href="CURLOPT_SSH_AUTH_TYPES.html">CURLOPT_SSH_AUTH_TYPES</a></td><td> set desired auth types for SFTP and SCP</td></tr>
+<tr><td><a href="CURLOPT_SSH_COMPRESSION.html">CURLOPT_SSH_COMPRESSION</a></td><td> enables compression / decompression of SSH traffic</td></tr>
+<tr><td><a href="CURLOPT_SSH_HOST_PUBLIC_KEY_MD5.html">CURLOPT_SSH_HOST_PUBLIC_KEY_MD5</a></td><td> checksum of SSH server public key</td></tr>
+<tr><td><a href="CURLOPT_SSH_KEYDATA.html">CURLOPT_SSH_KEYDATA</a></td><td> pointer to pass to the SSH key callback</td></tr>
+<tr><td><a href="CURLOPT_SSH_KEYFUNCTION.html">CURLOPT_SSH_KEYFUNCTION</a></td><td> callback for known host matching logic</td></tr>
+<tr><td><a href="CURLOPT_SSH_KNOWNHOSTS.html">CURLOPT_SSH_KNOWNHOSTS</a></td><td> file name holding the SSH known hosts</td></tr>
+<tr><td><a href="CURLOPT_SSH_PRIVATE_KEYFILE.html">CURLOPT_SSH_PRIVATE_KEYFILE</a></td><td> set private key file for SSH auth</td></tr>
+<tr><td><a href="CURLOPT_SSH_PUBLIC_KEYFILE.html">CURLOPT_SSH_PUBLIC_KEYFILE</a></td><td> set public key file for SSH auth</td></tr>
+<tr><td><a href="CURLOPT_SSLCERT.html">CURLOPT_SSLCERT</a></td><td> set SSL client certificate</td></tr>
+<tr><td><a href="CURLOPT_SSLCERTTYPE.html">CURLOPT_SSLCERTTYPE</a></td><td> specify type of the client SSL certificate</td></tr>
+<tr><td><a href="CURLOPT_SSLENGINE.html">CURLOPT_SSLENGINE</a></td><td> set SSL engine identifier</td></tr>
+<tr><td><a href="CURLOPT_SSLENGINE_DEFAULT.html">CURLOPT_SSLENGINE_DEFAULT</a></td><td> make SSL engine default</td></tr>
+<tr><td><a href="CURLOPT_SSLKEY.html">CURLOPT_SSLKEY</a></td><td> specify private keyfile for TLS and SSL client cert</td></tr>
+<tr><td><a href="CURLOPT_SSLKEYTYPE.html">CURLOPT_SSLKEYTYPE</a></td><td> set type of the private key file</td></tr>
+<tr><td><a href="CURLOPT_SSLVERSION.html">CURLOPT_SSLVERSION</a></td><td> set preferred TLS/SSL version</td></tr>
+<tr><td><a href="CURLOPT_SSL_CIPHER_LIST.html">CURLOPT_SSL_CIPHER_LIST</a></td><td> specify ciphers to use for TLS</td></tr>
+<tr><td><a href="CURLOPT_SSL_CTX_DATA.html">CURLOPT_SSL_CTX_DATA</a></td><td> custom pointer passed to ssl_ctx callback</td></tr>
+<tr><td><a href="CURLOPT_SSL_CTX_FUNCTION.html">CURLOPT_SSL_CTX_FUNCTION</a></td><td> SSL context callback for OpenSSL, wolfSSL/CyaSSL or mbedTLS</td></tr>
+<tr><td><a href="CURLOPT_SSL_ENABLE_ALPN.html">CURLOPT_SSL_ENABLE_ALPN</a></td><td> enable ALPN</td></tr>
+<tr><td><a href="CURLOPT_SSL_ENABLE_NPN.html">CURLOPT_SSL_ENABLE_NPN</a></td><td> enable NPN</td></tr>
+<tr><td><a href="CURLOPT_SSL_FALSESTART.html">CURLOPT_SSL_FALSESTART</a></td><td> enable TLS false start</td></tr>
+<tr><td><a href="CURLOPT_SSL_OPTIONS.html">CURLOPT_SSL_OPTIONS</a></td><td> set SSL behavior options</td></tr>
+<tr><td><a href="CURLOPT_SSL_SESSIONID_CACHE.html">CURLOPT_SSL_SESSIONID_CACHE</a></td><td> enable/disable use of the SSL session-ID cache</td></tr>
+<tr><td><a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a></td><td> verify the certificate's name against host</td></tr>
+<tr><td><a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a></td><td> verify the peer's SSL certificate</td></tr>
+<tr><td><a href="CURLOPT_SSL_VERIFYSTATUS.html">CURLOPT_SSL_VERIFYSTATUS</a></td><td> verify the certificate's status</td></tr>
+<tr><td><a href="CURLOPT_STDERR.html">CURLOPT_STDERR</a></td><td> redirect stderr to another stream</td></tr>
+<tr><td><a href="CURLOPT_STREAM_DEPENDS.html">CURLOPT_STREAM_DEPENDS</a></td><td> set stream this transfer depends on</td></tr>
+<tr><td><a href="CURLOPT_STREAM_DEPENDS_E.html">CURLOPT_STREAM_DEPENDS_E</a></td><td> set stream this transfer depends on exclusively</td></tr>
+<tr><td><a href="CURLOPT_STREAM_WEIGHT.html">CURLOPT_STREAM_WEIGHT</a></td><td> set numerical stream weight</td></tr>
+<tr><td><a href="CURLOPT_SUPPRESS_CONNECT_HEADERS.html">CURLOPT_SUPPRESS_CONNECT_HEADERS</a></td><td> Suppress proxy CONNECT response headers from user callbacks</td></tr>
+<tr><td><a href="CURLOPT_TCP_FASTOPEN.html">CURLOPT_TCP_FASTOPEN</a></td><td> enable TCP Fast Open</td></tr>
+<tr><td><a href="CURLOPT_TCP_KEEPALIVE.html">CURLOPT_TCP_KEEPALIVE</a></td><td> enable TCP keep-alive probing</td></tr>
+<tr><td><a href="CURLOPT_TCP_KEEPIDLE.html">CURLOPT_TCP_KEEPIDLE</a></td><td> set TCP keep-alive idle time wait</td></tr>
+<tr><td><a href="CURLOPT_TCP_KEEPINTVL.html">CURLOPT_TCP_KEEPINTVL</a></td><td> set TCP keep-alive interval</td></tr>
+<tr><td><a href="CURLOPT_TCP_NODELAY.html">CURLOPT_TCP_NODELAY</a></td><td> set the TCP_NODELAY option</td></tr>
+<tr><td><a href="CURLOPT_TELNETOPTIONS.html">CURLOPT_TELNETOPTIONS</a></td><td> custom telnet options</td></tr>
+<tr><td><a href="CURLOPT_TFTP_BLKSIZE.html">CURLOPT_TFTP_BLKSIZE</a></td><td> TFTP block size</td></tr>
+<tr><td><a href="CURLOPT_TFTP_NO_OPTIONS.html">CURLOPT_TFTP_NO_OPTIONS</a></td><td> Do not send TFTP options requests.</td></tr>
+<tr><td><a href="CURLOPT_TIMECONDITION.html">CURLOPT_TIMECONDITION</a></td><td> select condition for a time request</td></tr>
+<tr><td><a href="CURLOPT_TIMEOUT.html">CURLOPT_TIMEOUT</a></td><td> set maximum time the request is allowed to take</td></tr>
+<tr><td><a href="CURLOPT_TIMEOUT_MS.html">CURLOPT_TIMEOUT_MS</a></td><td> set maximum time the request is allowed to take</td></tr>
+<tr><td><a href="CURLOPT_TIMEVALUE.html">CURLOPT_TIMEVALUE</a></td><td> set time value for conditional</td></tr>
+<tr><td><a href="CURLOPT_TIMEVALUE_LARGE.html">CURLOPT_TIMEVALUE_LARGE</a></td><td> set time value for conditional</td></tr>
+<tr><td><a href="CURLOPT_TLS13_CIPHERS.html">CURLOPT_TLS13_CIPHERS</a></td><td> specify ciphers suites to use for TLS 1.3</td></tr>
+<tr><td><a href="CURLOPT_TLSAUTH_PASSWORD.html">CURLOPT_TLSAUTH_PASSWORD</a></td><td> password to use for TLS authentication</td></tr>
+<tr><td><a href="CURLOPT_TLSAUTH_TYPE.html">CURLOPT_TLSAUTH_TYPE</a></td><td> set TLS authentication methods</td></tr>
+<tr><td><a href="CURLOPT_TLSAUTH_USERNAME.html">CURLOPT_TLSAUTH_USERNAME</a></td><td> user name to use for TLS authentication</td></tr>
+<tr><td><a href="CURLOPT_TRANSFERTEXT.html">CURLOPT_TRANSFERTEXT</a></td><td> request a text based transfer for FTP</td></tr>
+<tr><td><a href="CURLOPT_TRANSFER_ENCODING.html">CURLOPT_TRANSFER_ENCODING</a></td><td> ask for HTTP Transfer Encoding</td></tr>
+<tr><td><a href="CURLOPT_UNIX_SOCKET_PATH.html">CURLOPT_UNIX_SOCKET_PATH</a></td><td> set Unix domain socket</td></tr>
+<tr><td><a href="CURLOPT_UNRESTRICTED_AUTH.html">CURLOPT_UNRESTRICTED_AUTH</a></td><td> send credentials to other hosts too</td></tr>
+<tr><td><a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a></td><td> enable data upload</td></tr>
+<tr><td><a href="CURLOPT_URL.html">CURLOPT_URL</a></td><td> provide the URL to use in the request</td></tr>
+<tr><td><a href="CURLOPT_USERAGENT.html">CURLOPT_USERAGENT</a></td><td> set HTTP user-agent header</td></tr>
+<tr><td><a href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a></td><td> user name to use in authentication</td></tr>
+<tr><td><a href="CURLOPT_USERPWD.html">CURLOPT_USERPWD</a></td><td> user name and password to use in authentication</td></tr>
+<tr><td><a href="CURLOPT_USE_SSL.html">CURLOPT_USE_SSL</a></td><td> request using SSL / TLS for the transfer</td></tr>
+<tr><td><a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a></td><td> set verbose mode on/off</td></tr>
+<tr><td><a href="CURLOPT_WILDCARDMATCH.html">CURLOPT_WILDCARDMATCH</a></td><td> enable directory wildcard transfers</td></tr>
+<tr><td><a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a></td><td> custom pointer passed to the write callback</td></tr>
+<tr><td><a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a></td><td> set callback for writing received data</td></tr>
+<tr><td><a href="CURLOPT_XFERINFODATA.html">CURLOPT_XFERINFODATA</a></td><td> custom pointer passed to the progress callback</td></tr>
+<tr><td><a href="CURLOPT_XFERINFOFUNCTION.html">CURLOPT_XFERINFOFUNCTION</a></td><td> callback to progress meter function</td></tr>
+<tr><td><a href="CURLOPT_XOAUTH2_BEARER.html">CURLOPT_XOAUTH2_BEARER</a></td><td> specify OAuth 2.0 access token</td></tr>
+</table>
+</div>
+</div>
+
+</BODY>
+</HTML>

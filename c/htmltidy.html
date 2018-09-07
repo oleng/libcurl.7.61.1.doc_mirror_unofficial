@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - htmltidy.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>htmltidy.c</b></div>
+<h1> htmltidy.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/htmltidy.c">Download htmltidy.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Download a document and use libtidy to parse the HTML.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/*
+ * LibTidy =&gt; http://tidy.sourceforge.net
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;tidy/tidy.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;tidy/buffio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* curl write callback, to fill tidy's input buffer...  */ </FONT></I>
+uint <B><FONT COLOR="#0000FF">write_cb</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *in, uint size, uint nmemb, TidyBuffer *out)
+{
+  uint r;
+  r = size * nmemb;
+  tidyBufAppend(out, in, r);
+  <B><FONT COLOR="#A020F0">return</FONT></B> r;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Traverse the document tree */ </FONT></I>
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">dumpNode</FONT></B>(TidyDoc doc, TidyNode tnod, <B><FONT COLOR="#228B22">int</FONT></B> indent)
+{
+  TidyNode child;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(child = tidyGetChild(tnod); child; child = tidyGetNext(child) ) {
+    ctmbstr name = tidyNodeGetName(child);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(name) {
+      <I><FONT COLOR="#B22222">/* if it has a name, then it's an HTML tag ... */ </FONT></I>
+      TidyAttr attr;
+      printf(<B><FONT COLOR="#BC8F8F">&quot;%*.*s%s &quot;</FONT></B>, indent, indent, <B><FONT COLOR="#BC8F8F">&quot;&lt;&quot;</FONT></B>, name);
+      <I><FONT COLOR="#B22222">/* walk the attribute list */ </FONT></I>
+      <B><FONT COLOR="#A020F0">for</FONT></B>(attr = tidyAttrFirst(child); attr; attr = tidyAttrNext(attr) ) {
+        printf(tidyAttrName(attr));
+        tidyAttrValue(attr)?printf(<B><FONT COLOR="#BC8F8F">&quot;=\&quot;%s\&quot; &quot;</FONT></B>,
+                                   tidyAttrValue(attr)):printf(<B><FONT COLOR="#BC8F8F">&quot; &quot;</FONT></B>);
+      }
+      printf(<B><FONT COLOR="#BC8F8F">&quot;&gt;\n&quot;</FONT></B>);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      <I><FONT COLOR="#B22222">/* if it doesn't have a name, then it's probably text, cdata, etc... */ </FONT></I>
+      TidyBuffer buf;
+      tidyBufInit(&amp;buf);
+      tidyNodeGetText(doc, child, &amp;buf);
+      printf(<B><FONT COLOR="#BC8F8F">&quot;%*.*s\n&quot;</FONT></B>, indent, indent, buf.bp?(<B><FONT COLOR="#228B22">char</FONT></B> *)buf.bp:<B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>);
+      tidyBufFree(&amp;buf);
+    }
+    dumpNode(doc, child, indent + 4); <I><FONT COLOR="#B22222">/* recursive */ </FONT></I>
+  }
+}
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  CURL *curl;
+  <B><FONT COLOR="#228B22">char</FONT></B> curl_errbuf[CURL_ERROR_SIZE];
+  TidyDoc tdoc;
+  TidyBuffer docbuf = {0};
+  TidyBuffer tidy_errbuf = {0};
+  <B><FONT COLOR="#228B22">int</FONT></B> err;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc == 2) {
+    curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, argv[1]);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a>, curl_errbuf);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 0L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_cb);
+&nbsp;
+    tdoc = tidyCreate();
+    tidyOptSetBool(tdoc, TidyForceOutput, yes); <I><FONT COLOR="#B22222">/* try harder */ </FONT></I>
+    tidyOptSetInt(tdoc, TidyWrapLen, 4096);
+    tidySetErrorBuffer(tdoc, &amp;tidy_errbuf);
+    tidyBufInit(&amp;docbuf);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;docbuf);
+    err = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!err) {
+      err = tidyParseBuffer(tdoc, &amp;docbuf); <I><FONT COLOR="#B22222">/* parse the input */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(err &gt;= 0) {
+        err = tidyCleanAndRepair(tdoc); <I><FONT COLOR="#B22222">/* fix any problems */ </FONT></I>
+        <B><FONT COLOR="#A020F0">if</FONT></B>(err &gt;= 0) {
+          err = tidyRunDiagnostics(tdoc); <I><FONT COLOR="#B22222">/* load tidy error buffer */ </FONT></I>
+          <B><FONT COLOR="#A020F0">if</FONT></B>(err &gt;= 0) {
+            dumpNode(tdoc, tidyGetRoot(tdoc), 0); <I><FONT COLOR="#B22222">/* walk the tree */ </FONT></I>
+            fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, tidy_errbuf.bp); <I><FONT COLOR="#B22222">/* show errors */ </FONT></I>
+          }
+        }
+      }
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B>
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, curl_errbuf);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* clean-up */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+    tidyBufFree(&amp;docbuf);
+    tidyBufFree(&amp;tidy_errbuf);
+    tidyRelease(tdoc);
+    <B><FONT COLOR="#A020F0">return</FONT></B> err;
+&nbsp;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    printf(<B><FONT COLOR="#BC8F8F">&quot;usage: %s &lt;url&gt;\n&quot;</FONT></B>, argv[0]);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

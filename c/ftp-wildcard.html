@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - ftp-wildcard.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>ftp-wildcard.c</b></div>
+<h1> ftp-wildcard.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/ftp-wildcard.c">Download ftp-wildcard.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2016, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * FTP wildcard pattern matching
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> callback_data {
+  FILE *output;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> <B><FONT COLOR="#0000FF">file_is_coming</FONT></B>(<B><FONT COLOR="#228B22">struct</FONT></B> curl_fileinfo *finfo,
+                           <B><FONT COLOR="#228B22">struct</FONT></B> callback_data *data,
+                           <B><FONT COLOR="#228B22">int</FONT></B> remains);
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> <B><FONT COLOR="#0000FF">file_is_downloaded</FONT></B>(<B><FONT COLOR="#228B22">struct</FONT></B> callback_data *data);
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_it</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *buff, size_t size, size_t nmemb,
+                       <B><FONT COLOR="#228B22">void</FONT></B> *cb_data);
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> rc = CURLE_OK;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* curl easy handle */ </FONT></I>
+  CURL *handle;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* help data */ </FONT></I>
+  <B><FONT COLOR="#228B22">struct</FONT></B> callback_data data = { 0 };
+&nbsp;
+  <I><FONT COLOR="#B22222">/* global initialization */ </FONT></I>
+  rc = <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(rc)
+    <B><FONT COLOR="#A020F0">return</FONT></B> rc;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* initialization of easy handle */ </FONT></I>
+  handle = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!handle) {
+    <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+    <B><FONT COLOR="#A020F0">return</FONT></B> CURLE_OUT_OF_MEMORY;
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* turn on wildcard matching */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WILDCARDMATCH.html">CURLOPT_WILDCARDMATCH</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* callback is called before download of concrete file started */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_CHUNK_BGN_FUNCTION.html">CURLOPT_CHUNK_BGN_FUNCTION</a>, file_is_coming);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* callback is called after data from the file have been transferred */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_CHUNK_END_FUNCTION.html">CURLOPT_CHUNK_END_FUNCTION</a>, file_is_downloaded);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* this callback will write contents into files */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_it);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* put transfer data into callbacks */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_CHUNK_DATA.html">CURLOPT_CHUNK_DATA</a>, &amp;data);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;data);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L); */ </FONT></I>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set an URL containing wildcard pattern (only in the last part) */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc == 2)
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, argv[1]);
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;ftp://example.com//*&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* and start transfer! */test </FONT></I>
+  rc = <a href="curl_easy_perform.html">curl_easy_perform</a>(handle);
+&nbsp;
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(handle);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> rc;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> <B><FONT COLOR="#0000FF">file_is_coming</FONT></B>(<B><FONT COLOR="#228B22">struct</FONT></B> curl_fileinfo *finfo,
+                           <B><FONT COLOR="#228B22">struct</FONT></B> callback_data *data,
+                           <B><FONT COLOR="#228B22">int</FONT></B> remains)
+{
+  printf(<B><FONT COLOR="#BC8F8F">&quot;%3d %40s %10luB &quot;</FONT></B>, remains, finfo-&gt;filename,
+         (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)finfo-&gt;size);
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(finfo-&gt;filetype) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLFILETYPE_DIRECTORY</FONT></B>:
+    printf(<B><FONT COLOR="#BC8F8F">&quot; DIR\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLFILETYPE_FILE</FONT></B>:
+    printf(<B><FONT COLOR="#BC8F8F">&quot;FILE &quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+    printf(<B><FONT COLOR="#BC8F8F">&quot;OTHER\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(finfo-&gt;filetype == CURLFILETYPE_FILE) {
+    <I><FONT COLOR="#B22222">/* do not transfer files &gt;= 50B */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(finfo-&gt;size &gt; 50) {
+      printf(<B><FONT COLOR="#BC8F8F">&quot;SKIPPED\n&quot;</FONT></B>);
+      <B><FONT COLOR="#A020F0">return</FONT></B> CURL_CHUNK_BGN_FUNC_SKIP;
+    }
+&nbsp;
+    data-&gt;output = fopen(finfo-&gt;filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!data-&gt;output) {
+      <B><FONT COLOR="#A020F0">return</FONT></B> CURL_CHUNK_BGN_FUNC_FAIL;
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURL_CHUNK_BGN_FUNC_OK;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> <B><FONT COLOR="#0000FF">file_is_downloaded</FONT></B>(<B><FONT COLOR="#228B22">struct</FONT></B> callback_data *data)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(data-&gt;output) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;DOWNLOADED\n&quot;</FONT></B>);
+    fclose(data-&gt;output);
+    data-&gt;output = 0x0;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURL_CHUNK_END_FUNC_OK;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_it</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *buff, size_t size, size_t nmemb,
+                       <B><FONT COLOR="#228B22">void</FONT></B> *cb_data)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> callback_data *data = cb_data;
+  size_t written = 0;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(data-&gt;output)
+    written = fwrite(buff, size, nmemb, data-&gt;output);
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    <I><FONT COLOR="#B22222">/* listing output */ </FONT></I>
+    written = fwrite(buff, size, nmemb, stdout);
+  <B><FONT COLOR="#A020F0">return</FONT></B> written;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

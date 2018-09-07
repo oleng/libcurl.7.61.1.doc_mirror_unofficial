@@ -1,0 +1,601 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - curlx.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>curlx.c</b></div>
+<h1> curlx.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/curlx.c">Download curlx.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/*
+  curlx.c  Authors: Peter Sylvester, Jean-Paul Merlin
+&nbsp;
+  This is a little program to demonstrate the usage of
+&nbsp;
+  - an ssl initialisation callback setting a user key and trustbases
+  coming from a pkcs12 file
+  - using an ssl application callback to find a URI in the
+  certificate presented during ssl session establishment.
+&nbsp;
+*/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * demonstrates use of SSL context callback, requires OpenSSL
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+ * Copyright (c) 2003 The OpenEvidence Project.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, the following disclaimer,
+ *    and the original OpenSSL and SSLeay Licences below.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions, the following disclaimer
+ *    and the original OpenSSL and SSLeay Licences below in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * 3. All advertising materials mentioning features or use of this
+ *    software must display the following acknowledgments:
+ *    &quot;This product includes software developed by the Openevidence Project
+ *    for use in the OpenEvidence Toolkit. (http://www.openevidence.org/)&quot;
+ *    This product includes software developed by the OpenSSL Project
+ *    for use in the OpenSSL Toolkit (https://www.openssl.org/)&quot;
+ *    This product includes cryptographic software written by Eric Young
+ *    (eay@cryptsoft.com).  This product includes software written by Tim
+ *    Hudson (tjh@cryptsoft.com).&quot;
+ *
+ * 4. The names &quot;OpenEvidence Toolkit&quot; and &quot;OpenEvidence Project&quot; must not be
+ *    used to endorse or promote products derived from this software without
+ *    prior written permission. For written permission, please contact
+ *    openevidence-core@openevidence.org.
+ *
+ * 5. Products derived from this software may not be called &quot;OpenEvidence&quot;
+ *    nor may &quot;OpenEvidence&quot; appear in their names without prior written
+ *    permission of the OpenEvidence Project.
+ *
+ * 6. Redistributions of any form whatsoever must retain the following
+ *    acknowledgments:
+ *    &quot;This product includes software developed by the OpenEvidence Project
+ *    for use in the OpenEvidence Toolkit (http://www.openevidence.org/)
+ *    This product includes software developed by the OpenSSL Project
+ *    for use in the OpenSSL Toolkit (https://www.openssl.org/)&quot;
+ *    This product includes cryptographic software written by Eric Young
+ *    (eay@cryptsoft.com).  This product includes software written by Tim
+ *    Hudson (tjh@cryptsoft.com).&quot;
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE OpenEvidence PROJECT ``AS IS'' AND ANY
+ * EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE OpenEvidence PROJECT OR
+ * ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * ====================================================================
+ *
+ * This product includes software developed by the OpenSSL Project
+ * for use in the OpenSSL Toolkit (https://www.openssl.org/)
+ * This product includes cryptographic software written by Eric Young
+ * (eay@cryptsoft.com).  This product includes software written by Tim
+ * Hudson (tjh@cryptsoft.com).
+ *
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/x509v3.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/x509_vfy.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/crypto.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/lhash.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/objects.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/err.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/evp.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/x509.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/pkcs12.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/bio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/ssl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *curlx_usage[]={
+  <B><FONT COLOR="#BC8F8F">&quot;usage: curlx args\n&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -p12 arg         - tia  file &quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -envpass arg     - environment variable which content the tia private&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot; key password&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -out arg         - output file (response)- default stdout&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -in arg          - input file (request)- default stdin&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -connect arg     - URL of the server for the connection ex:&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot; www.openevidence.org&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -mimetype arg    - MIME type for data in ex : application/timestamp-query&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot; or application/dvcs -default application/timestamp-query&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -acceptmime arg  - MIME type acceptable for the response ex : &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;application/timestamp-response or application/dvcs -default none&quot;</FONT></B>,
+  <B><FONT COLOR="#BC8F8F">&quot; -accesstype arg  - an Object identifier in an AIA/SIA method, e.g.&quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot; AD_DVCS or ad_timestamping&quot;</FONT></B>,
+  NULL
+};
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+&nbsp;
+./curlx -p12 psy.p12 -envpass XX -in request -verbose -accesstype AD_DVCS
+-mimetype application/dvcs -acceptmime application/dvcs -out response
+&nbsp;
+*/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+ * We use this ZERO_NULL to avoid picky compiler warnings,
+ * when assigning a NULL pointer to a function pointer var.
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">ZERO_NULL</FONT> 0
+&nbsp;
+<I><FONT COLOR="#B22222">/* This is a context that we pass to all callbacks */ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> sslctxparm_st {
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *p12file;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *pst;
+  PKCS12 *p12;
+  EVP_PKEY *pkey;
+  X509 *usercert;
+  STACK_OF(X509) * ca;
+  CURL *curl;
+  BIO *errorbio;
+  <B><FONT COLOR="#228B22">int</FONT></B> accesstype;
+  <B><FONT COLOR="#228B22">int</FONT></B> verbose;
+&nbsp;
+} sslctxparm;
+&nbsp;
+<I><FONT COLOR="#B22222">/* some helper function. */ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *<B><FONT COLOR="#0000FF">ia5string</FONT></B>(ASN1_IA5STRING *ia5)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *tmp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!ia5 || !ia5-&gt;length)
+    <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+  tmp = OPENSSL_malloc(ia5-&gt;length + 1);
+  memcpy(tmp, ia5-&gt;data, ia5-&gt;length);
+  tmp[ia5-&gt;length] = 0;
+  <B><FONT COLOR="#A020F0">return</FONT></B> tmp;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* A convenience routine to get an access URI. */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *<B><FONT COLOR="#0000FF">my_get_ext</FONT></B>(X509 *cert, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> type,
+                                 <B><FONT COLOR="#228B22">int</FONT></B> extensiontype)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+  STACK_OF(ACCESS_DESCRIPTION) * accessinfo;
+  accessinfo =  X509_get_ext_d2i(cert, extensiontype, NULL, NULL);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!sk_ACCESS_DESCRIPTION_num(accessinfo))
+    <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i &lt; sk_ACCESS_DESCRIPTION_num(accessinfo); i++) {
+    ACCESS_DESCRIPTION * ad = sk_ACCESS_DESCRIPTION_value(accessinfo, i);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(OBJ_obj2nid(ad-&gt;method) == type) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(ad-&gt;location-&gt;type == GEN_URI) {
+        <B><FONT COLOR="#A020F0">return</FONT></B> ia5string(ad-&gt;location-&gt;d.ia5);
+      }
+      <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+    }
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* This is an application verification call back, it does not
+   perform any addition verification but tries to find a URL
+   in the presented certificate. If found, this will become
+   the URL to be used in the POST.
+*/ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">ssl_app_verify_callback</FONT></B>(X509_STORE_CTX *ctx, <B><FONT COLOR="#228B22">void</FONT></B> *arg)
+{
+  sslctxparm * p = (sslctxparm *) arg;
+  <B><FONT COLOR="#228B22">int</FONT></B> ok;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(p-&gt;verbose &gt; 2)
+    BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;entering ssl_app_verify_callback\n&quot;</FONT></B>);
+&nbsp;
+  ok = X509_verify_cert(ctx);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(ok &amp;&amp; ctx-&gt;cert) {
+    <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *accessinfo;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(p-&gt;verbose &gt; 1)
+      X509_print_ex(p-&gt;errorbio, ctx-&gt;cert, 0, 0);
+&nbsp;
+    accessinfo = my_get_ext(ctx-&gt;cert, p-&gt;accesstype, NID_sinfo_access);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(accessinfo) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(p-&gt;verbose)
+        BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;Setting URL from SIA to: %s\n&quot;</FONT></B>, accessinfo);
+&nbsp;
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p-&gt;curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, accessinfo);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(accessinfo = my_get_ext(ctx-&gt;cert, p-&gt;accesstype,
+                                    NID_info_access)) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(p-&gt;verbose)
+        BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;Setting URL from AIA to: %s\n&quot;</FONT></B>, accessinfo);
+&nbsp;
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p-&gt;curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, accessinfo);
+    }
+  }
+  <B><FONT COLOR="#A020F0">if</FONT></B>(p-&gt;verbose &gt; 2)
+    BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;leaving ssl_app_verify_callback with %d\n&quot;</FONT></B>, ok);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> ok;
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* The SSL initialisation callback. The callback sets:
+   - a private key and certificate
+   - a trusted ca certificate
+   - a preferred cipherlist
+   - an application verification callback (the function above)
+*/ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> CURLcode <B><FONT COLOR="#0000FF">sslctxfun</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">void</FONT></B> *sslctx, <B><FONT COLOR="#228B22">void</FONT></B> *parm)
+{
+  sslctxparm *p = (sslctxparm *) parm;
+  SSL_CTX *ctx = (SSL_CTX *) sslctx;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!SSL_CTX_use_certificate(ctx, p-&gt;usercert)) {
+    BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;SSL_CTX_use_certificate problem\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!SSL_CTX_use_PrivateKey(ctx, p-&gt;pkey)) {
+    BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;SSL_CTX_use_PrivateKey\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!SSL_CTX_check_private_key(ctx)) {
+    BIO_printf(p-&gt;errorbio, <B><FONT COLOR="#BC8F8F">&quot;SSL_CTX_check_private_key\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  SSL_CTX_set_quiet_shutdown(ctx, 1);
+  SSL_CTX_set_cipher_list(ctx, <B><FONT COLOR="#BC8F8F">&quot;RC4-MD5&quot;</FONT></B>);
+  SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+&nbsp;
+  X509_STORE_add_cert(SSL_CTX_get_cert_store(ctx),
+                      sk_X509_value(p-&gt;ca, sk_X509_num(p-&gt;ca)-1));
+&nbsp;
+  SSL_CTX_set_verify_depth(ctx, 2);
+  SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, ZERO_NULL);
+  SSL_CTX_set_cert_verify_callback(ctx, ssl_app_verify_callback, parm);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURLE_OK;
+  <B><FONT COLOR="#5F9EA0">err</FONT></B>:
+  ERR_print_errors(p-&gt;errorbio);
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURLE_SSL_CERTPROBLEM;
+&nbsp;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  BIO* in = NULL;
+  BIO* out = NULL;
+&nbsp;
+  <B><FONT COLOR="#228B22">char</FONT></B> *outfile = NULL;
+  <B><FONT COLOR="#228B22">char</FONT></B> *infile = NULL;
+&nbsp;
+  <B><FONT COLOR="#228B22">int</FONT></B> tabLength = 100;
+  <B><FONT COLOR="#228B22">char</FONT></B> *binaryptr;
+  <B><FONT COLOR="#228B22">char</FONT></B> *mimetype;
+  <B><FONT COLOR="#228B22">char</FONT></B> *mimetypeaccept = NULL;
+  <B><FONT COLOR="#228B22">char</FONT></B> *contenttype;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> **pp;
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *hostporturl = NULL;
+  BIO *p12bio;
+  <B><FONT COLOR="#228B22">char</FONT></B> **args = argv + 1;
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *serverurl;
+  sslctxparm p;
+  <B><FONT COLOR="#228B22">char</FONT></B> *response;
+&nbsp;
+  CURLcode res;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *headers = NULL;
+  <B><FONT COLOR="#228B22">int</FONT></B> badarg = 0;
+&nbsp;
+  binaryptr = malloc(tabLength);
+&nbsp;
+  p.verbose = 0;
+  p.errorbio = BIO_new_fp(stderr, BIO_NOCLOSE);
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we need some more for the P12 decoding */ </FONT></I>
+&nbsp;
+  OpenSSL_add_all_ciphers();
+  OpenSSL_add_all_digests();
+  ERR_load_crypto_strings();
+&nbsp;
+  <B><FONT COLOR="#A020F0">while</FONT></B>(*args &amp;&amp; *args[0] == <B><FONT COLOR="#BC8F8F">'-'</FONT></B>) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!strcmp (*args, <B><FONT COLOR="#BC8F8F">&quot;-in&quot;</FONT></B>)) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        infile = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(!strcmp (*args, <B><FONT COLOR="#BC8F8F">&quot;-out&quot;</FONT></B>)) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        outfile = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(!strcmp (*args, <B><FONT COLOR="#BC8F8F">&quot;-p12&quot;</FONT></B>)) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        p.p12file = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-envpass&quot;</FONT></B>) == 0) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        p.pst = getenv(*(++args));
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-connect&quot;</FONT></B>) == 0) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        hostporturl = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-mimetype&quot;</FONT></B>) == 0) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        mimetype = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-acceptmime&quot;</FONT></B>) == 0) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        mimetypeaccept = *(++args);
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-accesstype&quot;</FONT></B>) == 0) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(args[1]) {
+        p.accesstype = OBJ_obj2nid(OBJ_txt2obj(*++args, 0));
+        <B><FONT COLOR="#A020F0">if</FONT></B>(p.accesstype == 0)
+          badarg = 1;
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        badarg = 1;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(strcmp(*args, <B><FONT COLOR="#BC8F8F">&quot;-verbose&quot;</FONT></B>) == 0) {
+      p.verbose++;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B>
+      badarg = 1;
+    args++;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(mimetype == NULL || mimetypeaccept == NULL)
+    badarg = 1;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(badarg) {
+    <B><FONT COLOR="#A020F0">for</FONT></B>(pp = curlx_usage; (*pp != NULL); pp++)
+      BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, *pp);
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set input */ </FONT></I>
+&nbsp;
+  in = BIO_new(BIO_s_file());
+  <B><FONT COLOR="#A020F0">if</FONT></B>(in == NULL) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Error setting input bio\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(infile == NULL)
+    BIO_set_fp(in, stdin, BIO_NOCLOSE|BIO_FP_TEXT);
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(BIO_read_filename(in, infile) &lt;= 0) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Error opening input file %s\n&quot;</FONT></B>, infile);
+    BIO_free(in);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* set output  */ </FONT></I>
+&nbsp;
+  out = BIO_new(BIO_s_file());
+  <B><FONT COLOR="#A020F0">if</FONT></B>(out == NULL) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Error setting output bio.\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(outfile == NULL)
+    BIO_set_fp(out, stdout, BIO_NOCLOSE|BIO_FP_TEXT);
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(BIO_write_filename(out, outfile) &lt;= 0) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Error opening output file %s\n&quot;</FONT></B>, outfile);
+    BIO_free(out);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+&nbsp;
+  p.errorbio = BIO_new_fp(stderr, BIO_NOCLOSE);
+&nbsp;
+  p.curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!p.curl) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Cannot init curl lib\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  p12bio = BIO_new_file(p.p12file, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!p12bio) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Error opening P12 file %s\n&quot;</FONT></B>, p.p12file);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+  p.p12 = d2i_PKCS12_bio(p12bio, NULL);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!p.p12) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Cannot decode P12 structure %s\n&quot;</FONT></B>, p.p12file);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  p.ca = NULL;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!(PKCS12_parse (p.p12, p.pst, &amp;(p.pkey), &amp;(p.usercert), &amp;(p.ca) ) )) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Invalid P12 structure in %s\n&quot;</FONT></B>, p.p12file);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(sk_X509_num(p.ca) &lt;= 0) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;No trustworthy CA given.%s\n&quot;</FONT></B>, p.p12file);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(p.verbose &gt; 1)
+    X509_print_ex(p.errorbio, p.usercert, 0, 0);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* determine URL to go */ </FONT></I>
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(hostporturl) {
+    size_t len = strlen(hostporturl) + 9;
+    serverurl = malloc(len);
+    snprintf(serverurl, len, <B><FONT COLOR="#BC8F8F">&quot;https://%s&quot;</FONT></B>, hostporturl);
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(p.accesstype != 0) { <I><FONT COLOR="#B22222">/* see whether we can find an AIA or SIA for a
+                                  given access type */ </FONT></I>
+    serverurl = my_get_ext(p.usercert, p.accesstype, NID_info_access);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!serverurl) {
+      <B><FONT COLOR="#228B22">int</FONT></B> j = 0;
+      BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;no service URL in user cert &quot;</FONT></B>
+                 <B><FONT COLOR="#BC8F8F">&quot;cherching in others certificats\n&quot;</FONT></B>);
+      <B><FONT COLOR="#A020F0">for</FONT></B>(j = 0; j&lt;sk_X509_num(p.ca); j++) {
+        serverurl = my_get_ext(sk_X509_value(p.ca, j), p.accesstype,
+                               NID_info_access);
+        <B><FONT COLOR="#A020F0">if</FONT></B>(serverurl)
+          <B><FONT COLOR="#A020F0">break</FONT></B>;
+        serverurl = my_get_ext(sk_X509_value(p.ca, j), p.accesstype,
+                               NID_sinfo_access);
+        <B><FONT COLOR="#A020F0">if</FONT></B>(serverurl)
+          <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!serverurl) {
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;no service URL in certificats,&quot;</FONT></B>
+               <B><FONT COLOR="#BC8F8F">&quot; check '-accesstype (AD_DVCS | ad_timestamping)'&quot;</FONT></B>
+               <B><FONT COLOR="#BC8F8F">&quot; or use '-connect'\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(p.verbose)
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Service URL: &lt;%s&gt;\n&quot;</FONT></B>, serverurl);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, serverurl);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Now specify the POST binary data */ </FONT></I>
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_POSTFIELDS.html">CURLOPT_POSTFIELDS</a>, binaryptr);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_POSTFIELDSIZE.html">CURLOPT_POSTFIELDSIZE</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)tabLength);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* pass our list of custom made headers */ </FONT></I>
+&nbsp;
+  contenttype = malloc(15 + strlen(mimetype));
+  snprintf(contenttype, 15 + strlen(mimetype), <B><FONT COLOR="#BC8F8F">&quot;Content-type: %s&quot;</FONT></B>, mimetype);
+  headers = <a href="curl_slist_append.html">curl_slist_append</a>(headers, contenttype);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, headers);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(p.verbose)
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;Service URL: &lt;%s&gt;\n&quot;</FONT></B>, serverurl);
+&nbsp;
+  {
+    FILE *outfp;
+    BIO_get_fp(out, &amp;outfp);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, outfp);
+  }
+&nbsp;
+  res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_SSL_CTX_FUNCTION.html">CURLOPT_SSL_CTX_FUNCTION</a>, sslctxfun);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+    BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;%d %s=%d %d\n&quot;</FONT></B>, 513,
+               <B><FONT COLOR="#BC8F8F">&quot;CURLOPT_SSL_CTX_FUNCTION&quot;</FONT></B>, <a href="CURLOPT_SSL_CTX_FUNCTION.html">CURLOPT_SSL_CTX_FUNCTION</a>, res);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_SSL_CTX_DATA.html">CURLOPT_SSL_CTX_DATA</a>, &amp;p);
+&nbsp;
+  {
+    <B><FONT COLOR="#228B22">int</FONT></B> lu; <B><FONT COLOR="#228B22">int</FONT></B> i = 0;
+    <B><FONT COLOR="#A020F0">while</FONT></B>((lu = BIO_read(in, &amp;binaryptr[i], tabLength-i)) &gt;0) {
+      i += lu;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(i == tabLength) {
+        tabLength += 100;
+        binaryptr = realloc(binaryptr, tabLength); <I><FONT COLOR="#B22222">/* should be more careful */ </FONT></I>
+      }
+    }
+    tabLength = i;
+  }
+  <I><FONT COLOR="#B22222">/* Now specify the POST binary data */ </FONT></I>
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_POSTFIELDS.html">CURLOPT_POSTFIELDS</a>, binaryptr);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(p.curl, <a href="CURLOPT_POSTFIELDSIZE.html">CURLOPT_POSTFIELDSIZE</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)tabLength);
+&nbsp;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Perform the request, res will get the return code */ </FONT></I>
+&nbsp;
+  BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;%d %s %d\n&quot;</FONT></B>, 537, <B><FONT COLOR="#BC8F8F">&quot;curl_easy_perform&quot;</FONT></B>,
+             res = <a href="curl_easy_perform.html">curl_easy_perform</a>(p.curl));
+  {
+    <B><FONT COLOR="#228B22">int</FONT></B> result = <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(p.curl, <a href="CURLINFO_CONTENT_TYPE.html">CURLINFO_CONTENT_TYPE</a>, &amp;response);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(mimetypeaccept &amp;&amp; p.verbose) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(!strcmp(mimetypeaccept, response))
+        BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;the response has a correct mimetype : %s\n&quot;</FONT></B>,
+                   response);
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;the response doesn\'t have an acceptable &quot;</FONT></B>
+                   <B><FONT COLOR="#BC8F8F">&quot;mime type, it is %s instead of %s\n&quot;</FONT></B>,
+                   response, mimetypeaccept);
+    }
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/*** code d'erreur si accept mime ***, egalement code return HTTP != 200 ***/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* free the header list*/ </FONT></I>
+&nbsp;
+  <a href="curl_slist_free_all.html">curl_slist_free_all</a>(headers);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(p.curl);
+&nbsp;
+  BIO_free(in);
+  BIO_free(out);
+  <B><FONT COLOR="#A020F0">return</FONT></B> (EXIT_SUCCESS);
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">err</FONT></B>: BIO_printf(p.errorbio, <B><FONT COLOR="#BC8F8F">&quot;error&quot;</FONT></B>);
+  exit(1);
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - imap-tls.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>imap-tls.c</b></div>
+<h1> imap-tls.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/imap-tls.c">Download imap-tls.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2016, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * IMAP example using TLS
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* This is a simple example showing how to fetch mail using libcurl's IMAP
+ * capabilities. It builds on the imap-fetch.c example adding transport
+ * security to protect the authentication details from being snooped.
+ *
+ * Note that this example requires libcurl 7.30.0 or above.
+ */ </FONT></I>
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res = CURLE_OK;
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* Set username and password */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a>, <B><FONT COLOR="#BC8F8F">&quot;user&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PASSWORD.html">CURLOPT_PASSWORD</a>, <B><FONT COLOR="#BC8F8F">&quot;secret&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* This will fetch message 1 from the user's inbox */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>,
+                     <B><FONT COLOR="#BC8F8F">&quot;imap://imap.example.com/INBOX/;UID=1&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* In this example, we'll start with a plain text connection, and upgrade
+     * to Transport Layer Security (TLS) using the STARTTLS command. Be careful
+     * of using CURLUSESSL_TRY here, because if TLS upgrade fails, the transfer
+     * will continue anyway - see the security discussion in the libcurl
+     * tutorial for more details. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_USE_SSL.html">CURLOPT_USE_SSL</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURLUSESSL_ALL);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* If your server doesn't have a valid certificate, then you can disable
+     * part of the Transport Layer Security protection by setting the
+     * CURLOPT_SSL_VERIFYPEER and <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a> options to 0 (false).
+     *   <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 0L);
+     *   <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, 0L);
+     *
+     * That is, in general, a bad idea. It is still better than sending your
+     * authentication details in plain text though.  Instead, you should get
+     * the issuer certificate (or the host certificate if the certificate is
+     * self-signed) and add it to the set of certificates that are known to
+     * libcurl using CURLOPT_CAINFO and/or <a href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a>. See docs/SSLCERTS
+     * for more information. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a>, <B><FONT COLOR="#BC8F8F">&quot;/path/to/certificate.pem&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Since the traffic will be encrypted, it is very useful to turn on debug
+     * information within libcurl to see what is happening during the
+     * transfer */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Perform the fetch */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> (<B><FONT COLOR="#228B22">int</FONT></B>)res;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

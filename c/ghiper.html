@@ -1,0 +1,473 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - ghiper.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>ghiper.c</b></div>
+<h1> ghiper.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/ghiper.c">Download ghiper.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * multi socket API usage together with with glib2
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* Example application source code using the multi socket interface to
+ * download many files at once.
+ *
+ * Written by Jeff Pohlmeyer
+&nbsp;
+ Requires glib-2.x and a (POSIX?) system that has mkfifo().
+&nbsp;
+ This is an adaptation of libcurl's &quot;hipev.c&quot; and libevent's &quot;event-test.c&quot;
+ sample programs, adapted to use glib's g_io_channel in place of libevent.
+&nbsp;
+ When running, the program creates the named pipe &quot;hiper.fifo&quot;
+&nbsp;
+ Whenever there is input into the fifo, the program reads the input as a list
+ of URL's and creates some new easy handles to fetch each URL via the
+ curl_multi &quot;hiper&quot; API.
+&nbsp;
+&nbsp;
+ Thus, you can try a single URL:
+ % echo http://www.yahoo.com &gt; hiper.fifo
+&nbsp;
+ Or a whole bunch of them:
+ % cat my-url-list &gt; hiper.fifo
+&nbsp;
+ The fifo buffer is handled almost instantly, so you can even add more URL's
+ while the previous requests are still being downloaded.
+&nbsp;
+ This is purely a demo app, all retrieved data is simply discarded by the write
+ callback.
+&nbsp;
+*/ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;glib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/stat.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;fcntl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;errno.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">MSG_OUT</FONT> g_print   <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">SHOW_VERBOSE</FONT> 0    <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">SHOW_PROGRESS</FONT> 0   <I><FONT COLOR="#B22222"> </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* Global information, common to all connections */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> _GlobalInfo {
+  CURLM *multi;
+  guint timer_event;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running;
+} GlobalInfo;
+&nbsp;
+<I><FONT COLOR="#B22222">/* Information associated with a specific easy handle */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> _ConnInfo {
+  CURL *easy;
+  <B><FONT COLOR="#228B22">char</FONT></B> *url;
+  GlobalInfo *global;
+  <B><FONT COLOR="#228B22">char</FONT></B> error[CURL_ERROR_SIZE];
+} ConnInfo;
+&nbsp;
+<I><FONT COLOR="#B22222">/* Information associated with a specific socket */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> _SockInfo {
+  curl_socket_t sockfd;
+  CURL *easy;
+  <B><FONT COLOR="#228B22">int</FONT></B> action;
+  <B><FONT COLOR="#228B22">long</FONT></B> timeout;
+  GIOChannel *ch;
+  guint ev;
+  GlobalInfo *global;
+} SockInfo;
+&nbsp;
+<I><FONT COLOR="#B22222">/* Die if we get a bad CURLMcode somewhere */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">mcode_or_die</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *where, CURLMcode code)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(CURLM_OK != code) {
+    <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *s;
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(code) {
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_BAD_HANDLE</FONT></B>:         s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_HANDLE&quot;</FONT></B>;         <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_BAD_EASY_HANDLE</FONT></B>:    s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_EASY_HANDLE&quot;</FONT></B>;    <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_OUT_OF_MEMORY</FONT></B>:      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_OUT_OF_MEMORY&quot;</FONT></B>;      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_INTERNAL_ERROR</FONT></B>:     s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_INTERNAL_ERROR&quot;</FONT></B>;     <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_BAD_SOCKET</FONT></B>:         s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_SOCKET&quot;</FONT></B>;         <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_UNKNOWN_OPTION</FONT></B>:     s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_UNKNOWN_OPTION&quot;</FONT></B>;     <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B>     <B><FONT COLOR="#5F9EA0">CURLM_LAST</FONT></B>:               s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_LAST&quot;</FONT></B>;               <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>: s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_unknown&quot;</FONT></B>;
+    }
+    MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;ERROR: %s returns %s\n&quot;</FONT></B>, where, s);
+    exit(code);
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Check for completed transfers, and remove their easy handles */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">check_multi_info</FONT></B>(GlobalInfo *g)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *eff_url;
+  CURLMsg *msg;
+  <B><FONT COLOR="#228B22">int</FONT></B> msgs_left;
+  ConnInfo *conn;
+  CURL *easy;
+  CURLcode res;
+&nbsp;
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;REMAINING: %d\n&quot;</FONT></B>, g-&gt;still_running);
+  <B><FONT COLOR="#A020F0">while</FONT></B>((msg = <a href="curl_multi_info_read.html">curl_multi_info_read</a>(g-&gt;multi, &amp;msgs_left))) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(msg-&gt;msg == CURLMSG_DONE) {
+      easy = msg-&gt;easy_handle;
+      res = msg-&gt;data.result;
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy, <a href="CURLINFO_PRIVATE.html">CURLINFO_PRIVATE</a>, &amp;conn);
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy, <a href="CURLINFO_EFFECTIVE_URL.html">CURLINFO_EFFECTIVE_URL</a>, &amp;eff_url);
+      MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;DONE: %s =&gt; (%d) %s\n&quot;</FONT></B>, eff_url, res, conn-&gt;error);
+      <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(g-&gt;multi, easy);
+      free(conn-&gt;url);
+      <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(easy);
+      free(conn);
+    }
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Called by glib when our timeout expires */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> gboolean <B><FONT COLOR="#0000FF">timer_cb</FONT></B>(gpointer data)
+{
+  GlobalInfo *g = (GlobalInfo *)data;
+  CURLMcode rc;
+&nbsp;
+  rc = <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(g-&gt;multi,
+                                CURL_SOCKET_TIMEOUT, 0, &amp;g-&gt;still_running);
+  mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;timer_cb: curl_multi_socket_action&quot;</FONT></B>, rc);
+  check_multi_info(g);
+  <B><FONT COLOR="#A020F0">return</FONT></B> FALSE;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Update the event timer after curl_multi library calls */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">update_timeout_cb</FONT></B>(CURLM *multi, <B><FONT COLOR="#228B22">long</FONT></B> timeout_ms, <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> timeval timeout;
+  GlobalInfo *g = (GlobalInfo *)userp;
+  timeout.tv_sec = timeout_ms/1000;
+  timeout.tv_usec = (timeout_ms%1000)*1000;
+&nbsp;
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;*** update_timeout_cb %ld =&gt; %ld:%ld ***\n&quot;</FONT></B>,
+          timeout_ms, timeout.tv_sec, timeout.tv_usec);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* TODO
+   *
+   * if timeout_ms is 0, call <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>() at once!
+   *
+   * if timeout_ms is -1, just delete the timer
+   *
+   * for all other values of timeout_ms, this should set or *update*
+   * the timer to the new value
+   */ </FONT></I>
+  g-&gt;timer_event = g_timeout_add(timeout_ms, timer_cb, g);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Called by glib when we get action on a multi socket */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> gboolean <B><FONT COLOR="#0000FF">event_cb</FONT></B>(GIOChannel *ch, GIOCondition condition, gpointer data)
+{
+  GlobalInfo *g = (GlobalInfo*) data;
+  CURLMcode rc;
+  <B><FONT COLOR="#228B22">int</FONT></B> fd = g_io_channel_unix_get_fd(ch);
+&nbsp;
+  <B><FONT COLOR="#228B22">int</FONT></B> action =
+    (condition &amp; G_IO_IN ? CURL_CSELECT_IN : 0) |
+    (condition &amp; G_IO_OUT ? CURL_CSELECT_OUT : 0);
+&nbsp;
+  rc = <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(g-&gt;multi, fd, action, &amp;g-&gt;still_running);
+  mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;event_cb: curl_multi_socket_action&quot;</FONT></B>, rc);
+&nbsp;
+  check_multi_info(g);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(g-&gt;still_running) {
+    <B><FONT COLOR="#A020F0">return</FONT></B> TRUE;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;last transfer done, kill timeout\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(g-&gt;timer_event) {
+      g_source_remove(g-&gt;timer_event);
+    }
+    <B><FONT COLOR="#A020F0">return</FONT></B> FALSE;
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Clean up the SockInfo structure */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">remsock</FONT></B>(SockInfo *f)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!f) {
+    <B><FONT COLOR="#A020F0">return</FONT></B>;
+  }
+  <B><FONT COLOR="#A020F0">if</FONT></B>(f-&gt;ev) {
+    g_source_remove(f-&gt;ev);
+  }
+  g_free(f);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Assign information to a SockInfo structure */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">setsock</FONT></B>(SockInfo *f, curl_socket_t s, CURL *e, <B><FONT COLOR="#228B22">int</FONT></B> act,
+                    GlobalInfo *g)
+{
+  GIOCondition kind =
+    (act&amp;CURL_POLL_IN?G_IO_IN:0)|(act&amp;CURL_POLL_OUT?G_IO_OUT:0);
+&nbsp;
+  f-&gt;sockfd = s;
+  f-&gt;action = act;
+  f-&gt;easy = e;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(f-&gt;ev) {
+    g_source_remove(f-&gt;ev);
+  }
+  f-&gt;ev = g_io_add_watch(f-&gt;ch, kind, event_cb, g);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Initialize a new SockInfo structure */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">addsock</FONT></B>(curl_socket_t s, CURL *easy, <B><FONT COLOR="#228B22">int</FONT></B> action, GlobalInfo *g)
+{
+  SockInfo *fdp = g_malloc0(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(SockInfo));
+&nbsp;
+  fdp-&gt;global = g;
+  fdp-&gt;ch = g_io_channel_unix_new(s);
+  setsock(fdp, s, easy, action, g);
+  <a href="curl_multi_assign.html">curl_multi_assign</a>(g-&gt;multi, s, fdp);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">sock_cb</FONT></B>(CURL *e, curl_socket_t s, <B><FONT COLOR="#228B22">int</FONT></B> what, <B><FONT COLOR="#228B22">void</FONT></B> *cbp, <B><FONT COLOR="#228B22">void</FONT></B> *sockp)
+{
+  GlobalInfo *g = (GlobalInfo*) cbp;
+  SockInfo *fdp = (SockInfo*) sockp;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *whatstr[]={ <B><FONT COLOR="#BC8F8F">&quot;none&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;IN&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;OUT&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;INOUT&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;REMOVE&quot;</FONT></B> };
+&nbsp;
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;socket callback: s=%d e=%p what=%s &quot;</FONT></B>, s, e, whatstr[what]);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(what == CURL_POLL_REMOVE) {
+    MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>);
+    remsock(fdp);
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!fdp) {
+      MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;Adding data: %s%s\n&quot;</FONT></B>,
+              what&amp;CURL_POLL_IN?<B><FONT COLOR="#BC8F8F">&quot;READ&quot;</FONT></B>:<B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>,
+              what&amp;CURL_POLL_OUT?<B><FONT COLOR="#BC8F8F">&quot;WRITE&quot;</FONT></B>:<B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>);
+      addsock(s, e, what, g);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      MSG_OUT(
+        <B><FONT COLOR="#BC8F8F">&quot;Changing action from %d to %d\n&quot;</FONT></B>, fdp-&gt;action, what);
+      setsock(fdp, s, e, what, g);
+    }
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_cb</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *data)
+{
+  size_t realsize = size * nmemb;
+  ConnInfo *conn = (ConnInfo*) data;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)ptr;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)conn;
+  <B><FONT COLOR="#A020F0">return</FONT></B> realsize;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">prog_cb</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *p, <B><FONT COLOR="#228B22">double</FONT></B> dltotal, <B><FONT COLOR="#228B22">double</FONT></B> dlnow, <B><FONT COLOR="#228B22">double</FONT></B> ult,
+                   <B><FONT COLOR="#228B22">double</FONT></B> uln)
+{
+  ConnInfo *conn = (ConnInfo *)p;
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;Progress: %s (%g/%g)\n&quot;</FONT></B>, conn-&gt;url, dlnow, dltotal);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Create a new easy handle, and add it to the global curl_multi */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">new_conn</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *url, GlobalInfo *g)
+{
+  ConnInfo *conn;
+  CURLMcode rc;
+&nbsp;
+  conn = g_malloc0(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(ConnInfo));
+  conn-&gt;error[0]=<B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+  conn-&gt;easy = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!conn-&gt;easy) {
+    MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_init.html">curl_easy_init</a>() failed, exiting!\n&quot;</FONT></B>);
+    exit(2);
+  }
+  conn-&gt;global = g;
+  conn-&gt;url = g_strdup(url);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, conn-&gt;url);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_cb);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)SHOW_VERBOSE);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a>, conn-&gt;error);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a>, conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, SHOW_PROGRESS?0L:1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a>, prog_cb);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PROGRESSDATA.html">CURLOPT_PROGRESSDATA</a>, conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_CONNECTTIMEOUT.html">CURLOPT_CONNECTTIMEOUT</a>, 30L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_LOW_SPEED_LIMIT.html">CURLOPT_LOW_SPEED_LIMIT</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_LOW_SPEED_TIME.html">CURLOPT_LOW_SPEED_TIME</a>, 30L);
+&nbsp;
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;Adding easy %p to multi %p (%s)\n&quot;</FONT></B>, conn-&gt;easy, g-&gt;multi, url);
+  rc = <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(g-&gt;multi, conn-&gt;easy);
+  mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;new_conn: curl_multi_add_handle&quot;</FONT></B>, rc);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* note that the add_handle() will set a time-out to trigger very soon so
+     that the necessary socket_action() call will be called by this app */ </FONT></I>
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* This gets called by glib whenever data is received from the fifo */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> gboolean <B><FONT COLOR="#0000FF">fifo_cb</FONT></B>(GIOChannel *ch, GIOCondition condition, gpointer data)
+{
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">BUF_SIZE</FONT> 1024
+  gsize len, tp;
+  gchar *buf, *tmp, *all = NULL;
+  GIOStatus rv;
+&nbsp;
+  <B><FONT COLOR="#A020F0">do</FONT></B> {
+    GError *err = NULL;
+    rv = g_io_channel_read_line(ch, &amp;buf, &amp;len, &amp;tp, &amp;err);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(buf) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(tp) {
+        buf[tp]=<B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+      }
+      new_conn(buf, (GlobalInfo*)data);
+      g_free(buf);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      buf = g_malloc(BUF_SIZE + 1);
+      <B><FONT COLOR="#A020F0">while</FONT></B>(TRUE) {
+        buf[BUF_SIZE]=<B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+        g_io_channel_read_chars(ch, buf, BUF_SIZE, &amp;len, &amp;err);
+        <B><FONT COLOR="#A020F0">if</FONT></B>(len) {
+          buf[len]=<B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+          <B><FONT COLOR="#A020F0">if</FONT></B>(all) {
+            tmp = all;
+            all = g_strdup_printf(<B><FONT COLOR="#BC8F8F">&quot;%s%s&quot;</FONT></B>, tmp, buf);
+            g_free(tmp);
+          }
+          <B><FONT COLOR="#A020F0">else</FONT></B> {
+            all = g_strdup(buf);
+          }
+        }
+        <B><FONT COLOR="#A020F0">else</FONT></B> {
+          <B><FONT COLOR="#A020F0">break</FONT></B>;
+        }
+      }
+      <B><FONT COLOR="#A020F0">if</FONT></B>(all) {
+        new_conn(all, (GlobalInfo*)data);
+        g_free(all);
+      }
+      g_free(buf);
+    }
+    <B><FONT COLOR="#A020F0">if</FONT></B>(err) {
+      g_error(<B><FONT COLOR="#BC8F8F">&quot;fifo_cb: %s&quot;</FONT></B>, err-&gt;message);
+      g_free(err);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+  } <B><FONT COLOR="#A020F0">while</FONT></B>((len) &amp;&amp; (rv == G_IO_STATUS_NORMAL));
+  <B><FONT COLOR="#A020F0">return</FONT></B> TRUE;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">init_fifo</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> stat st;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *fifo = <B><FONT COLOR="#BC8F8F">&quot;hiper.fifo&quot;</FONT></B>;
+  <B><FONT COLOR="#228B22">int</FONT></B> socket;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(lstat (fifo, &amp;st) == 0) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>((st.st_mode &amp; S_IFMT) == S_IFREG) {
+      errno = EEXIST;
+      perror(<B><FONT COLOR="#BC8F8F">&quot;lstat&quot;</FONT></B>);
+      exit(1);
+    }
+  }
+&nbsp;
+  unlink(fifo);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(mkfifo (fifo, 0600) == -1) {
+    perror(<B><FONT COLOR="#BC8F8F">&quot;mkfifo&quot;</FONT></B>);
+    exit(1);
+  }
+&nbsp;
+  socket = open(fifo, O_RDWR | O_NONBLOCK, 0);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(socket == -1) {
+    perror(<B><FONT COLOR="#BC8F8F">&quot;open&quot;</FONT></B>);
+    exit(1);
+  }
+  MSG_OUT(<B><FONT COLOR="#BC8F8F">&quot;Now, pipe some URL's into &gt; %s\n&quot;</FONT></B>, fifo);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> socket;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  GlobalInfo *g;
+  CURLMcode rc;
+  GMainLoop*gmain;
+  <B><FONT COLOR="#228B22">int</FONT></B> fd;
+  GIOChannel* ch;
+  g = g_malloc0(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(GlobalInfo));
+&nbsp;
+  fd = init_fifo();
+  ch = g_io_channel_unix_new(fd);
+  g_io_add_watch(ch, G_IO_IN, fifo_cb, g);
+  gmain = g_main_loop_new(NULL, FALSE);
+  g-&gt;multi = <a href="curl_multi_init.html">curl_multi_init</a>();
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g-&gt;multi, <a href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a>, sock_cb);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g-&gt;multi, <a href="CURLMOPT_SOCKETDATA.html">CURLMOPT_SOCKETDATA</a>, g);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g-&gt;multi, <a href="CURLMOPT_TIMERFUNCTION.html">CURLMOPT_TIMERFUNCTION</a>, update_timeout_cb);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g-&gt;multi, <a href="CURLMOPT_TIMERDATA.html">CURLMOPT_TIMERDATA</a>, g);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we don't call any curl_multi_socket*() function yet as we have no handles
+     added! */ </FONT></I>
+&nbsp;
+  g_main_loop_run(gmain);
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(g-&gt;multi);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

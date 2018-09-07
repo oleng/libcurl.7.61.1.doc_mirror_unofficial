@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - externalsocket.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>externalsocket.c</b></div>
+<h1> externalsocket.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/externalsocket.c">Download externalsocket.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * An example demonstrating how an application can pass in a custom
+ * socket to libcurl to use. This example also handles the connect itself.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">WIN32</FONT>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;windows.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;winsock2.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;ws2tcpip.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">close</FONT> closesocket
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/types.h&gt;</FONT></B>        <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/socket.h&gt;</FONT></B>       <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;netinet/in.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;arpa/inet.h&gt;</FONT></B>        <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>           <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;errno.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* The IP address and port number to connect to */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">IPADDR</FONT> <B><FONT COLOR="#BC8F8F">&quot;127.0.0.1&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">PORTNUM</FONT> 80
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifndef</FONT></B> <FONT COLOR="#B8860B">INADDR_NONE</FONT>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">INADDR_NONE</FONT> 0xffffffff
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_data</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+  <B><FONT COLOR="#A020F0">return</FONT></B> written;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">closecb</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *clientp, curl_socket_t item)
+{
+  (<B><FONT COLOR="#228B22">void</FONT></B>)clientp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;libcurl wants to close %d now\n&quot;</FONT></B>, (<B><FONT COLOR="#228B22">int</FONT></B>)item);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> curl_socket_t <B><FONT COLOR="#0000FF">opensocket</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *clientp,
+                                curlsocktype purpose,
+                                <B><FONT COLOR="#228B22">struct</FONT></B> curl_sockaddr *address)
+{
+  curl_socket_t sockfd;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)purpose;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)address;
+  sockfd = *(curl_socket_t *)clientp;
+  <I><FONT COLOR="#B22222">/* the actual externally set socket is passed in via the OPENSOCKETDATA
+     option */ </FONT></I>
+  <B><FONT COLOR="#A020F0">return</FONT></B> sockfd;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">sockopt_callback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *clientp, curl_socket_t curlfd,
+                            curlsocktype purpose)
+{
+  (<B><FONT COLOR="#228B22">void</FONT></B>)clientp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)curlfd;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)purpose;
+  <I><FONT COLOR="#B22222">/* This return code was added in libcurl 7.21.5 */ </FONT></I>
+  <B><FONT COLOR="#A020F0">return</FONT></B> CURL_SOCKOPT_ALREADY_CONNECTED;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res;
+  <B><FONT COLOR="#228B22">struct</FONT></B> sockaddr_in servaddr;  <I><FONT COLOR="#B22222">/*  socket address structure  */ </FONT></I>
+  curl_socket_t sockfd;
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">WIN32</FONT>
+  WSADATA wsaData;
+  <B><FONT COLOR="#228B22">int</FONT></B> initwsa = WSAStartup(MAKEWORD(2, 0), &amp;wsaData);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(initwsa != 0) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;WSAStartup failed: %d\n&quot;</FONT></B>, initwsa);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/*
+     * Note that libcurl will internally think that you connect to the host
+     * and port that you specify in the URL option.
+     */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;http://99.99.99.99:9999&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Create the socket &quot;manually&quot; */ </FONT></I>
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(sockfd == CURL_SOCKET_BAD) {
+      printf(<B><FONT COLOR="#BC8F8F">&quot;Error creating listening socket.\n&quot;</FONT></B>);
+      <B><FONT COLOR="#A020F0">return</FONT></B> 3;
+    }
+&nbsp;
+    memset(&amp;servaddr, 0, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port   = htons(PORTNUM);
+&nbsp;
+    servaddr.sin_addr.s_addr = inet_addr(IPADDR);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(INADDR_NONE == servaddr.sin_addr.s_addr)
+      <B><FONT COLOR="#A020F0">return</FONT></B> 2;
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(connect(sockfd, (<B><FONT COLOR="#228B22">struct</FONT></B> sockaddr *) &amp;servaddr, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(servaddr)) ==
+       -1) {
+      close(sockfd);
+      printf(<B><FONT COLOR="#BC8F8F">&quot;client error: connect: %s\n&quot;</FONT></B>, strerror(errno));
+      <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* no progress meter please */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* send all data to this function  */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_data);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* call this function to get a socket */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_OPENSOCKETFUNCTION.html">CURLOPT_OPENSOCKETFUNCTION</a>, opensocket);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_OPENSOCKETDATA.html">CURLOPT_OPENSOCKETDATA</a>, &amp;sockfd);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* call this function to close sockets */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_CLOSESOCKETFUNCTION.html">CURLOPT_CLOSESOCKETFUNCTION</a>, closecb);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_CLOSESOCKETDATA.html">CURLOPT_CLOSESOCKETDATA</a>, &amp;sockfd);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* call this function to set options for the socket */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_SOCKOPTFUNCTION.html">CURLOPT_SOCKOPTFUNCTION</a>, sockopt_callback);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1);
+&nbsp;
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res) {
+      printf(<B><FONT COLOR="#BC8F8F">&quot;libcurl error: %d\n&quot;</FONT></B>, res);
+      <B><FONT COLOR="#A020F0">return</FONT></B> 4;
+    }
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

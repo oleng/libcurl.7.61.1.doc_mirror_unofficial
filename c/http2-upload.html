@@ -1,0 +1,394 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - http2-upload.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>http2-upload.c</b></div>
+<h1> http2-upload.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/http2-upload.c">Download http2-upload.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Multiplexed HTTP/2 uploads over a single connection
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;fcntl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/stat.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* somewhat unix-specific */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/time.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* curl stuff */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifndef</FONT></B> <FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT>
+<I><FONT COLOR="#B22222">/* This little trick will just make sure that we don't enable pipelining for
+   libcurls old enough to not have this symbol. It is _not_ defined to zero in
+   a recent libcurl header. */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT> 0
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">NUM_HANDLES</FONT> 1000
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> *curl_hnd[NUM_HANDLES];
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> num_transfers;
+&nbsp;
+<I><FONT COLOR="#B22222">/* a handle to number lookup, highly ineffective when we do many
+   transfers... */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">hnd2num</FONT></B>(CURL *hnd)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt; num_transfers; i++) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(curl_hnd[i] == hnd)
+      <B><FONT COLOR="#A020F0">return</FONT></B> i;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0; <I><FONT COLOR="#B22222">/* weird, but just a fail-safe */ </FONT></I>
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B>
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">dump</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *text, <B><FONT COLOR="#228B22">int</FONT></B> num, <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *ptr, size_t size,
+          <B><FONT COLOR="#228B22">char</FONT></B> nohex)
+{
+  size_t i;
+  size_t c;
+  <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> width = 0x10;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(nohex)
+    <I><FONT COLOR="#B22222">/* without the hex output, we can fit more on screen */ </FONT></I>
+    width = 0x40;
+&nbsp;
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%d %s, %lu bytes (0x%lx)\n&quot;</FONT></B>,
+          num, text, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)size, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)size);
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;size; i += width) {
+&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%4.4lx: &quot;</FONT></B>, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)i);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!nohex) {
+      <I><FONT COLOR="#B22222">/* hex not disabled, show it */ </FONT></I>
+      <B><FONT COLOR="#A020F0">for</FONT></B>(c = 0; c &lt; width; c++)
+        <B><FONT COLOR="#A020F0">if</FONT></B>(i + c &lt; size)
+          fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%02x &quot;</FONT></B>, ptr[i + c]);
+        <B><FONT COLOR="#A020F0">else</FONT></B>
+          fputs(<B><FONT COLOR="#BC8F8F">&quot;   &quot;</FONT></B>, stderr);
+    }
+&nbsp;
+    <B><FONT COLOR="#A020F0">for</FONT></B>(c = 0; (c &lt; width) &amp;&amp; (i + c &lt; size); c++) {
+      <I><FONT COLOR="#B22222">/* check for 0D0A; if found, skip past and start a new line of output */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(nohex &amp;&amp; (i + c + 1 &lt; size) &amp;&amp; ptr[i + c] == 0x0D &amp;&amp;
+         ptr[i + c + 1] == 0x0A) {
+        i += (c + 2 - width);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%c&quot;</FONT></B>,
+              (ptr[i + c] &gt;= 0x20) &amp;&amp; (ptr[i + c]&lt;0x80)?ptr[i + c]:<B><FONT COLOR="#BC8F8F">'.'</FONT></B>);
+      <I><FONT COLOR="#B22222">/* check again for 0D0A, to avoid an extra \n if it's at width */ </FONT></I>
+      <B><FONT COLOR="#A020F0">if</FONT></B>(nohex &amp;&amp; (i + c + 2 &lt; size) &amp;&amp; ptr[i + c + 1] == 0x0D &amp;&amp;
+         ptr[i + c + 2] == 0x0A) {
+        i += (c + 3 - width);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+    }
+    fputc(<B><FONT COLOR="#BC8F8F">'\n'</FONT></B>, stderr); <I><FONT COLOR="#B22222">/* newline */ </FONT></I>
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">my_trace</FONT></B>(CURL *handle, curl_infotype type,
+             <B><FONT COLOR="#228B22">char</FONT></B> *data, size_t size,
+             <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> timebuf[60];
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *text;
+  <B><FONT COLOR="#228B22">int</FONT></B> num = hnd2num(handle);
+  <B><FONT COLOR="#228B22">static</FONT></B> time_t epoch_offset;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B>    known_offset;
+  <B><FONT COLOR="#228B22">struct</FONT></B> timeval tv;
+  time_t secs;
+  <B><FONT COLOR="#228B22">struct</FONT></B> tm *now;
+&nbsp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)handle; <I><FONT COLOR="#B22222">/* prevent compiler warning */ </FONT></I>
+  (<B><FONT COLOR="#228B22">void</FONT></B>)userp;
+&nbsp;
+  gettimeofday(&amp;tv, NULL);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!known_offset) {
+    epoch_offset = time(NULL) - tv.tv_sec;
+    known_offset = 1;
+  }
+  secs = epoch_offset + tv.tv_sec;
+  now = localtime(&amp;secs);  <I><FONT COLOR="#B22222">/* not thread safe but we don't care */ </FONT></I>
+  snprintf(timebuf, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(timebuf), <B><FONT COLOR="#BC8F8F">&quot;%02d:%02d:%02d.%06ld&quot;</FONT></B>,
+           now-&gt;tm_hour, now-&gt;tm_min, now-&gt;tm_sec, (<B><FONT COLOR="#228B22">long</FONT></B>)tv.tv_usec);
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_TEXT.html">CURLINFO_TEXT</a></FONT></B>:
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s [%d] Info: %s&quot;</FONT></B>, timebuf, num, data);
+    <I><FONT COLOR="#B22222">/* FALLTHROUGH */ </FONT></I>
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* in case a new one is introduced to shock us */ </FONT></I>
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_HEADER_OUT.html">CURLINFO_HEADER_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send header&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_DATA_OUT.html">CURLINFO_DATA_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_SSL_DATA_OUT.html">CURLINFO_SSL_DATA_OUT</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;=&gt; Send SSL data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_HEADER_IN.html">CURLINFO_HEADER_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv header&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_DATA_IN.html">CURLINFO_DATA_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0"><a href="https://curl.haxx.se/libcurl/c/CURLINFO_SSL_DATA_IN.html">CURLINFO_SSL_DATA_IN</a></FONT></B>:
+    text = <B><FONT COLOR="#BC8F8F">&quot;&lt;= Recv SSL data&quot;</FONT></B>;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+&nbsp;
+  dump(text, num, (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *)data, size, 1);
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> input {
+  FILE *in;
+  size_t bytes_read; <I><FONT COLOR="#B22222">/* count up */ </FONT></I>
+  CURL *hnd;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">read_callback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> input *i = userp;
+  size_t retcode = fread(ptr, size, nmemb, i-&gt;in);
+  i-&gt;bytes_read += retcode;
+  <B><FONT COLOR="#A020F0">return</FONT></B> retcode;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> input indata[NUM_HANDLES];
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">setup</FONT></B>(CURL *hnd, <B><FONT COLOR="#228B22">int</FONT></B> num, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *upload)
+{
+  FILE *out;
+  <B><FONT COLOR="#228B22">char</FONT></B> url[256];
+  <B><FONT COLOR="#228B22">char</FONT></B> filename[128];
+  <B><FONT COLOR="#228B22">struct</FONT></B> stat file_info;
+  curl_off_t uploadsize;
+&nbsp;
+  snprintf(filename, 128, <B><FONT COLOR="#BC8F8F">&quot;dl-%d&quot;</FONT></B>, num);
+  out = fopen(filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+&nbsp;
+  snprintf(url, 256, <B><FONT COLOR="#BC8F8F">&quot;https://localhost:8443/upload-%d&quot;</FONT></B>, num);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get the file size of the local file */ </FONT></I>
+  stat(upload, &amp;file_info);
+  uploadsize = file_info.st_size;
+&nbsp;
+  indata[num].in = fopen(upload, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+  indata[num].hnd = hnd;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* write to this file */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, out);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we want to use our own read function */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, read_callback);
+  <I><FONT COLOR="#B22222">/* read from this file */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, &amp;indata[num]);
+  <I><FONT COLOR="#B22222">/* provide the size of the upload */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_INFILESIZE_LARGE.html">CURLOPT_INFILESIZE_LARGE</a>, uploadsize);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* send in the URL to store the upload as */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* upload please */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* please be verbose */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_DEBUGFUNCTION.html">CURLOPT_DEBUGFUNCTION</a>, my_trace);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* HTTP/2 please */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_HTTP_VERSION.html">CURLOPT_HTTP_VERSION</a>, CURL_HTTP_VERSION_2_0);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we use a self-signed test server, skip verification during debugging */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 0L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, 0L);
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">if</FONT></B> (<FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT> &gt; 0)
+  <I><FONT COLOR="#B22222">/* wait for pipe connection to confirm */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(hnd, <a href="CURLOPT_PIPEWAIT.html">CURLOPT_PIPEWAIT</a>, 1L);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+  curl_hnd[num] = hnd;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/*
+ * Upload all files over HTTP/2, using the same physical connection!
+ */ </FONT></I>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  CURL *easy[NUM_HANDLES];
+  CURLM *multi_handle;
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running; <I><FONT COLOR="#B22222">/* keep number of running handles */ </FONT></I>
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *filename = <B><FONT COLOR="#BC8F8F">&quot;index.html&quot;</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &gt; 1)
+    <I><FONT COLOR="#B22222">/* if given a number, do that many transfers */ </FONT></I>
+    num_transfers = atoi(argv[1]);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &gt; 2)
+    <I><FONT COLOR="#B22222">/* if given a file name, upload this! */ </FONT></I>
+    filename = argv[2];
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!num_transfers || (num_transfers &gt; NUM_HANDLES))
+    num_transfers = 3; <I><FONT COLOR="#B22222">/* a suitable low default */ </FONT></I>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* init a multi stack */ </FONT></I>
+  multi_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;num_transfers; i++) {
+    easy[i] = <a href="curl_easy_init.html">curl_easy_init</a>();
+    <I><FONT COLOR="#B22222">/* set options */ </FONT></I>
+    setup(easy[i], i, filename);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* add the individual transfer */ </FONT></I>
+    <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, easy[i]);
+  }
+&nbsp;
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_PIPELINING.html">CURLMOPT_PIPELINING</a>, CURLPIPE_MULTIPLEX);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* We do HTTP/2 so let's stick to one connection per host */ </FONT></I>
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_MAX_HOST_CONNECTIONS.html">CURLMOPT_MAX_HOST_CONNECTIONS</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* we start some action by calling perform right away */ </FONT></I>
+  <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+&nbsp;
+  <B><FONT COLOR="#A020F0">do</FONT></B> {
+    <B><FONT COLOR="#228B22">struct</FONT></B> timeval timeout;
+    <B><FONT COLOR="#228B22">int</FONT></B> rc; <I><FONT COLOR="#B22222">/* select() return code */ </FONT></I>
+    CURLMcode mc; <I><FONT COLOR="#B22222">/* <a href="curl_multi_fdset.html">curl_multi_fdset</a>() return code */ </FONT></I>
+&nbsp;
+    fd_set fdread;
+    fd_set fdwrite;
+    fd_set fdexcep;
+    <B><FONT COLOR="#228B22">int</FONT></B> maxfd = -1;
+&nbsp;
+    <B><FONT COLOR="#228B22">long</FONT></B> curl_timeo = -1;
+&nbsp;
+    FD_ZERO(&amp;fdread);
+    FD_ZERO(&amp;fdwrite);
+    FD_ZERO(&amp;fdexcep);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* set a suitable timeout to play around with */ </FONT></I>
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+&nbsp;
+    <a href="curl_multi_timeout.html">curl_multi_timeout</a>(multi_handle, &amp;curl_timeo);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(curl_timeo &gt;= 0) {
+      timeout.tv_sec = curl_timeo / 1000;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(timeout.tv_sec &gt; 1)
+        timeout.tv_sec = 1;
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        timeout.tv_usec = (curl_timeo % 1000) * 1000;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* get file descriptors from the transfers */ </FONT></I>
+    mc = <a href="curl_multi_fdset.html">curl_multi_fdset</a>(multi_handle, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;maxfd);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(mc != CURLM_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_multi_fdset.html">curl_multi_fdset</a>() failed, code %d.\n&quot;</FONT></B>, mc);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* On success the value of maxfd is guaranteed to be &gt;= -1. We call
+       select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+       no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+       to sleep 100ms, which is the minimum suggested value in the
+       <a href="curl_multi_fdset.html">curl_multi_fdset</a>() doc. */ </FONT></I>
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(maxfd == -1) {
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_WIN32</FONT>
+      Sleep(100);
+      rc = 0;
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+      <I><FONT COLOR="#B22222">/* Portable sleep for platforms other than Windows. */ </FONT></I>
+      <B><FONT COLOR="#228B22">struct</FONT></B> timeval wait = { 0, 100 * 1000 }; <I><FONT COLOR="#B22222">/* 100ms */ </FONT></I>
+      rc = select(0, NULL, NULL, NULL, &amp;wait);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      <I><FONT COLOR="#B22222">/* Note that on some platforms 'timeout' may be modified by select().
+         If you need access to the original value save a copy beforehand. */ </FONT></I>
+      rc = select(maxfd + 1, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;timeout);
+    }
+&nbsp;
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(rc) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">-1</FONT></B>:
+      <I><FONT COLOR="#B22222">/* select error */ </FONT></I>
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">0</FONT></B>:
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      <I><FONT COLOR="#B22222">/* timeout or readable/writable sockets */ </FONT></I>
+      <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+  } <B><FONT COLOR="#A020F0">while</FONT></B>(still_running);
+&nbsp;
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(multi_handle);
+&nbsp;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(i = 0; i&lt;num_transfers; i++)
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(easy[i]);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

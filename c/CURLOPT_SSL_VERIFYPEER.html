@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_SSL_VERIFYPEER</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_SSL_VERIFYPEER</b></div>
+<h1> CURLOPT_SSL_VERIFYPEER explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_SSL_VERIFYPEER - verify the peer's SSL certificate <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_SSL_VERIFYPEER, long verify); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a long as parameter to enable or disable.
+<p class="level0">This option determines whether curl verifies the authenticity of the peer's certificate. A value of 1 means curl verifies; 0 (zero) means it doesn't.
+<p class="level0">When negotiating a TLS or SSL connection, the server sends a certificate indicating its identity.  Curl verifies whether the certificate is authentic, i.e. that you can trust that the server is who the certificate says it is. This trust is based on a chain of digital signatures, rooted in certification authority (CA) certificates you supply.  curl uses a default bundle of CA certificates (the path for that is determined at build time) and you can specify alternate certificates with the <a Class="emphasis" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a> option or the <a Class="emphasis" href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a> option.
+<p class="level0">When <a Class="emphasis" href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a> is enabled, and the verification fails to prove that the certificate is authentic, the connection fails.  When the option is zero, the peer certificate verification succeeds regardless.
+<p class="level0">Authenticating the certificate is not enough to be sure about the server. You typically also want to ensure that the server is the server you mean to be talking to.  Use <a Class="emphasis" href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a> for that. The check that the host name in the certificate is valid for the host name you're connecting to is done independently of the <a Class="emphasis" href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a> option.
+<p class="level0">WARNING: disabling verification of the certificate allows bad guys to man-in-the-middle the communication without you knowing it. Disabling verification makes the communication insecure. Just having encryption on a transfer is not enough as you cannot be sure that you are communicating with the correct end-point.
+<p class="level0">NOTE: even when this option is disabled, depending on the used TLS backend, curl may still load the certificate file specified in <a Class="emphasis" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a>. curl default settings in some distributions might use quite a large file as a default setting for <a Class="emphasis" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a>, so loading the file can be quite expensive, especially when dealing with many connections. Thus, in some situations, you might want to disable verification fully to save resources by setting <a Class="emphasis" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a> to NULL - but please also consider the warning above! <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">By default, curl assumes a value of 1. <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All TLS based protocols: HTTPS, FTPS, IMAPS, POP3S, SMTPS etc. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
+&nbsp;
+&nbsp; /* Set the default value: strict certificate check please */
+&nbsp; curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+&nbsp;
+&nbsp; curl_easy_perform(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">If built TLS enabled. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>, <a Class="manpage" href="CURLOPT_PROXY_SSL_VERIFYPEER.html">CURLOPT_PROXY_SSL_VERIFYPEER</a>, <a Class="manpage" href="CURLOPT_PROXY_SSL_VERIFYHOST.html">CURLOPT_PROXY_SSL_VERIFYHOST</a>, <a Class="manpage" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

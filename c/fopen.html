@@ -1,0 +1,581 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - fopen.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>fopen.c</b></div>
+<h1> fopen.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/fopen.c">Download fopen.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/*****************************************************************************
+ *
+ * This example source code introduces a c library buffered I/O interface to
+ * URL reads it supports fopen(), fread(), fgets(), feof(), fclose(),
+ * rewind(). Supported functions have identical prototypes to their normal c
+ * lib namesakes and are preceaded by url_ .
+ *
+ * Using this code you can replace your program's fopen() with url_fopen()
+ * and fread() with url_fread() and it become possible to read remote streams
+ * instead of (only) local files. Local files (ie those that can be directly
+ * fopened) will drop back to using the underlying clib implementations
+ *
+ * See the main() function at the bottom that shows an app that retrieves from
+ * a specified url using fgets() and fread() and saves as two output files.
+ *
+ * Copyright (c) 2003, 2017 Simtec Electronics
+ *
+ * Re-implemented by Vincent Sanders &lt;vince@kyllikki.org&gt; with extensive
+ * reference to original curl example code
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * This example requires libcurl 7.9.7 or later.
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * implements an fopen() abstraction allowing reading from URLs
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">ifndef</FONT></B> <FONT COLOR="#B8860B">WIN32</FONT>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/time.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;errno.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">enum</FONT></B> fcurl_type_e {
+  CFTYPE_NONE = 0,
+  CFTYPE_FILE = 1,
+  CFTYPE_CURL = 2
+};
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> fcurl_data
+{
+  <B><FONT COLOR="#228B22">enum</FONT></B> fcurl_type_e type;     <I><FONT COLOR="#B22222">/* type of handle */ </FONT></I>
+  <B><FONT COLOR="#228B22">union</FONT></B> {
+    CURL *curl;
+    FILE *file;
+  } handle;                   <I><FONT COLOR="#B22222">/* handle */ </FONT></I>
+&nbsp;
+  <B><FONT COLOR="#228B22">char</FONT></B> *buffer;               <I><FONT COLOR="#B22222">/* buffer to store cached data*/ </FONT></I>
+  size_t buffer_len;          <I><FONT COLOR="#B22222">/* currently allocated buffers length */ </FONT></I>
+  size_t buffer_pos;          <I><FONT COLOR="#B22222">/* end of data in buffer*/ </FONT></I>
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running;          <I><FONT COLOR="#B22222">/* Is background url fetch still in progress */ </FONT></I>
+};
+&nbsp;
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> fcurl_data URL_FILE;
+&nbsp;
+<I><FONT COLOR="#B22222">/* exported functions */ </FONT></I>
+URL_FILE *<B><FONT COLOR="#0000FF">url_fopen</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *operation);
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">url_fclose</FONT></B>(URL_FILE *file);
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">url_feof</FONT></B>(URL_FILE *file);
+size_t <B><FONT COLOR="#0000FF">url_fread</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, URL_FILE *file);
+<B><FONT COLOR="#228B22">char</FONT></B> *<B><FONT COLOR="#0000FF">url_fgets</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *ptr, size_t size, URL_FILE *file);
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">url_rewind</FONT></B>(URL_FILE *file);
+&nbsp;
+<I><FONT COLOR="#B22222">/* we use a global one for convenience */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> CURLM *multi_handle;
+&nbsp;
+<I><FONT COLOR="#B22222">/* curl calls this routine to get more data */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_callback</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *buffer,
+                             size_t size,
+                             size_t nitems,
+                             <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *newbuff;
+  size_t rembuff;
+&nbsp;
+  URL_FILE *url = (URL_FILE *)userp;
+  size *= nitems;
+&nbsp;
+  rembuff = url-&gt;buffer_len - url-&gt;buffer_pos; <I><FONT COLOR="#B22222">/* remaining space in buffer */ </FONT></I>
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(size &gt; rembuff) {
+    <I><FONT COLOR="#B22222">/* not enough space in buffer */ </FONT></I>
+    newbuff = realloc(url-&gt;buffer, url-&gt;buffer_len + (size - rembuff));
+    <B><FONT COLOR="#A020F0">if</FONT></B>(newbuff == NULL) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;callback buffer grow failed\n&quot;</FONT></B>);
+      size = rembuff;
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      <I><FONT COLOR="#B22222">/* realloc succeeded increase buffer size*/ </FONT></I>
+      url-&gt;buffer_len += size - rembuff;
+      url-&gt;buffer = newbuff;
+    }
+  }
+&nbsp;
+  memcpy(&amp;url-&gt;buffer[url-&gt;buffer_pos], buffer, size);
+  url-&gt;buffer_pos += size;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> size;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* use to attempt to fill the read buffer up to requested number of bytes */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">fill_buffer</FONT></B>(URL_FILE *file, size_t want)
+{
+  fd_set fdread;
+  fd_set fdwrite;
+  fd_set fdexcep;
+  <B><FONT COLOR="#228B22">struct</FONT></B> timeval timeout;
+  <B><FONT COLOR="#228B22">int</FONT></B> rc;
+  CURLMcode mc; <I><FONT COLOR="#B22222">/* <a href="curl_multi_fdset.html">curl_multi_fdset</a>() return code */ </FONT></I>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* only attempt to fill buffer if transactions still running and buffer
+   * doesn't exceed required size already
+   */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>((!file-&gt;still_running) || (file-&gt;buffer_pos &gt; want))
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* attempt to fill buffer */ </FONT></I>
+  <B><FONT COLOR="#A020F0">do</FONT></B> {
+    <B><FONT COLOR="#228B22">int</FONT></B> maxfd = -1;
+    <B><FONT COLOR="#228B22">long</FONT></B> curl_timeo = -1;
+&nbsp;
+    FD_ZERO(&amp;fdread);
+    FD_ZERO(&amp;fdwrite);
+    FD_ZERO(&amp;fdexcep);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* set a suitable timeout to fail on */ </FONT></I>
+    timeout.tv_sec = 60; <I><FONT COLOR="#B22222">/* 1 minute */ </FONT></I>
+    timeout.tv_usec = 0;
+&nbsp;
+    <a href="curl_multi_timeout.html">curl_multi_timeout</a>(multi_handle, &amp;curl_timeo);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(curl_timeo &gt;= 0) {
+      timeout.tv_sec = curl_timeo / 1000;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(timeout.tv_sec &gt; 1)
+        timeout.tv_sec = 1;
+      <B><FONT COLOR="#A020F0">else</FONT></B>
+        timeout.tv_usec = (curl_timeo % 1000) * 1000;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* get file descriptors from the transfers */ </FONT></I>
+    mc = <a href="curl_multi_fdset.html">curl_multi_fdset</a>(multi_handle, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;maxfd);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(mc != CURLM_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_multi_fdset.html">curl_multi_fdset</a>() failed, code %d.\n&quot;</FONT></B>, mc);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* On success the value of maxfd is guaranteed to be &gt;= -1. We call
+       select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+       no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+       to sleep 100ms, which is the minimum suggested value in the
+       <a href="curl_multi_fdset.html">curl_multi_fdset</a>() doc. */ </FONT></I>
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(maxfd == -1) {
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_WIN32</FONT>
+      Sleep(100);
+      rc = 0;
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+      <I><FONT COLOR="#B22222">/* Portable sleep for platforms other than Windows. */ </FONT></I>
+      <B><FONT COLOR="#228B22">struct</FONT></B> timeval wait = { 0, 100 * 1000 }; <I><FONT COLOR="#B22222">/* 100ms */ </FONT></I>
+      rc = select(0, NULL, NULL, NULL, &amp;wait);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      <I><FONT COLOR="#B22222">/* Note that on some platforms 'timeout' may be modified by select().
+         If you need access to the original value save a copy beforehand. */ </FONT></I>
+      rc = select(maxfd + 1, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;timeout);
+    }
+&nbsp;
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(rc) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">-1</FONT></B>:
+      <I><FONT COLOR="#B22222">/* select error */ </FONT></I>
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">0</FONT></B>:
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      <I><FONT COLOR="#B22222">/* timeout or readable/writable sockets */ </FONT></I>
+      <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;file-&gt;still_running);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+  } <B><FONT COLOR="#A020F0">while</FONT></B>(file-&gt;still_running &amp;&amp; (file-&gt;buffer_pos &lt; want));
+  <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* use to remove want bytes from the front of a files buffer */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">use_buffer</FONT></B>(URL_FILE *file, size_t want)
+{
+  <I><FONT COLOR="#B22222">/* sort out buffer */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>((file-&gt;buffer_pos - want) &lt;= 0) {
+    <I><FONT COLOR="#B22222">/* ditch buffer - write will recreate */ </FONT></I>
+    free(file-&gt;buffer);
+    file-&gt;buffer = NULL;
+    file-&gt;buffer_pos = 0;
+    file-&gt;buffer_len = 0;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    <I><FONT COLOR="#B22222">/* move rest down make it available for later */ </FONT></I>
+    memmove(file-&gt;buffer,
+            &amp;file-&gt;buffer[want],
+            (file-&gt;buffer_pos - want));
+&nbsp;
+    file-&gt;buffer_pos -= want;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+URL_FILE *<B><FONT COLOR="#0000FF">url_fopen</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *operation)
+{
+  <I><FONT COLOR="#B22222">/* this code could check for URLs or types in the 'url' and
+     basically use the real fopen() for standard files */ </FONT></I>
+&nbsp;
+  URL_FILE *file;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)operation;
+&nbsp;
+  file = calloc(1, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(URL_FILE));
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!file)
+    <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+&nbsp;
+  file-&gt;handle.file = fopen(url, operation);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(file-&gt;handle.file)
+    file-&gt;type = CFTYPE_FILE; <I><FONT COLOR="#B22222">/* marked as URL */ </FONT></I>
+&nbsp;
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    file-&gt;type = CFTYPE_CURL; <I><FONT COLOR="#B22222">/* marked as URL */ </FONT></I>
+    file-&gt;handle.curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(file-&gt;handle.curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(file-&gt;handle.curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, file);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(file-&gt;handle.curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 0L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(file-&gt;handle.curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_callback);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!multi_handle)
+      multi_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+&nbsp;
+    <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, file-&gt;handle.curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* lets start the fetch */ </FONT></I>
+    <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;file-&gt;still_running);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>((file-&gt;buffer_pos == 0) &amp;&amp; (!file-&gt;still_running)) {
+      <I><FONT COLOR="#B22222">/* if still_running is 0 now, we should return NULL */ </FONT></I>
+&nbsp;
+      <I><FONT COLOR="#B22222">/* make sure the easy handle is not in the multi handle anymore */ </FONT></I>
+      <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(multi_handle, file-&gt;handle.curl);
+&nbsp;
+      <I><FONT COLOR="#B22222">/* cleanup */ </FONT></I>
+      <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(file-&gt;handle.curl);
+&nbsp;
+      free(file);
+&nbsp;
+      file = NULL;
+    }
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> file;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">url_fclose</FONT></B>(URL_FILE *file)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> ret = 0;<I><FONT COLOR="#B22222">/* default is good return */ </FONT></I>
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(file-&gt;type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_FILE</FONT></B>:
+    ret = fclose(file-&gt;handle.file); <I><FONT COLOR="#B22222">/* passthrough */ </FONT></I>
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_CURL</FONT></B>:
+    <I><FONT COLOR="#B22222">/* make sure the easy handle is not in the multi handle anymore */ </FONT></I>
+    <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(multi_handle, file-&gt;handle.curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(file-&gt;handle.curl);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* unknown or supported type - oh dear */ </FONT></I>
+    ret = EOF;
+    errno = EBADF;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+&nbsp;
+  free(file-&gt;buffer);<I><FONT COLOR="#B22222">/* free any allocated buffer space */ </FONT></I>
+  free(file);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> ret;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">url_feof</FONT></B>(URL_FILE *file)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> ret = 0;
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(file-&gt;type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_FILE</FONT></B>:
+    ret = feof(file-&gt;handle.file);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_CURL</FONT></B>:
+    <B><FONT COLOR="#A020F0">if</FONT></B>((file-&gt;buffer_pos == 0) &amp;&amp; (!file-&gt;still_running))
+      ret = 1;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* unknown or supported type - oh dear */ </FONT></I>
+    ret = -1;
+    errno = EBADF;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> ret;
+}
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">url_fread</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, URL_FILE *file)
+{
+  size_t want;
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(file-&gt;type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_FILE</FONT></B>:
+    want = fread(ptr, size, nmemb, file-&gt;handle.file);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_CURL</FONT></B>:
+    want = nmemb * size;
+&nbsp;
+    fill_buffer(file, want);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* check if there's data in the buffer - if not fill_buffer()
+     * either errored or EOF */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!file-&gt;buffer_pos)
+      <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+    <I><FONT COLOR="#B22222">/* ensure only available data is considered */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(file-&gt;buffer_pos &lt; want)
+      want = file-&gt;buffer_pos;
+&nbsp;
+    <I><FONT COLOR="#B22222">/* xfer data to caller */ </FONT></I>
+    memcpy(ptr, file-&gt;buffer, want);
+&nbsp;
+    use_buffer(file, want);
+&nbsp;
+    want = want / size;     <I><FONT COLOR="#B22222">/* number of items */ </FONT></I>
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* unknown or supported type - oh dear */ </FONT></I>
+    want = 0;
+    errno = EBADF;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> want;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">char</FONT></B> *<B><FONT COLOR="#0000FF">url_fgets</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *ptr, size_t size, URL_FILE *file)
+{
+  size_t want = size - 1;<I><FONT COLOR="#B22222">/* always need to leave room for zero termination */ </FONT></I>
+  size_t loop;
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(file-&gt;type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_FILE</FONT></B>:
+    ptr = fgets(ptr, (<B><FONT COLOR="#228B22">int</FONT></B>)size, file-&gt;handle.file);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_CURL</FONT></B>:
+    fill_buffer(file, want);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* check if there's data in the buffer - if not fill either errored or
+     * EOF */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!file-&gt;buffer_pos)
+      <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+&nbsp;
+    <I><FONT COLOR="#B22222">/* ensure only available data is considered */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(file-&gt;buffer_pos &lt; want)
+      want = file-&gt;buffer_pos;
+&nbsp;
+    <I><FONT COLOR="#B22222">/*buffer contains data */ </FONT></I>
+    <I><FONT COLOR="#B22222">/* look for newline or eof */ </FONT></I>
+    <B><FONT COLOR="#A020F0">for</FONT></B>(loop = 0; loop &lt; want; loop++) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(file-&gt;buffer[loop] == <B><FONT COLOR="#BC8F8F">'\n'</FONT></B>) {
+        want = loop + 1;<I><FONT COLOR="#B22222">/* include newline */ </FONT></I>
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* xfer data to caller */ </FONT></I>
+    memcpy(ptr, file-&gt;buffer, want);
+    ptr[want] = 0;<I><FONT COLOR="#B22222">/* always null terminate */ </FONT></I>
+&nbsp;
+    use_buffer(file, want);
+&nbsp;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* unknown or supported type - oh dear */ </FONT></I>
+    ptr = NULL;
+    errno = EBADF;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> ptr;<I><FONT COLOR="#B22222">/*success */ </FONT></I>
+}
+&nbsp;
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">url_rewind</FONT></B>(URL_FILE *file)
+{
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(file-&gt;type) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_FILE</FONT></B>:
+    rewind(file-&gt;handle.file); <I><FONT COLOR="#B22222">/* passthrough */ </FONT></I>
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CFTYPE_CURL</FONT></B>:
+    <I><FONT COLOR="#B22222">/* halt transaction */ </FONT></I>
+    <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(multi_handle, file-&gt;handle.curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* restart */ </FONT></I>
+    <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, file-&gt;handle.curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* ditch buffer - write will recreate - resets stream pos*/ </FONT></I>
+    free(file-&gt;buffer);
+    file-&gt;buffer = NULL;
+    file-&gt;buffer_pos = 0;
+    file-&gt;buffer_len = 0;
+&nbsp;
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>: <I><FONT COLOR="#B22222">/* unknown or supported type - oh dear */ </FONT></I>
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  }
+}
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">FGETSFILE</FONT> <B><FONT COLOR="#BC8F8F">&quot;fgets.test&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">FREADFILE</FONT> <B><FONT COLOR="#BC8F8F">&quot;fread.test&quot;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">REWINDFILE</FONT> <B><FONT COLOR="#BC8F8F">&quot;rewind.test&quot;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* Small main program to retrieve from a url using fgets and fread saving the
+ * output to two test files (note the fgets method will corrupt binary files if
+ * they contain 0 chars */ </FONT></I>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  URL_FILE *handle;
+  FILE *outf;
+&nbsp;
+  size_t nread;
+  <B><FONT COLOR="#228B22">char</FONT></B> buffer[256];
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &lt; 2)
+    url = <B><FONT COLOR="#BC8F8F">&quot;http://192.168.7.3/testfile&quot;</FONT></B>;<I><FONT COLOR="#B22222">/* default to testurl */ </FONT></I>
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    url = argv[1];<I><FONT COLOR="#B22222">/* use passed url */ </FONT></I>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* copy from url line by line with fgets */ </FONT></I>
+  outf = fopen(FGETSFILE, <B><FONT COLOR="#BC8F8F">&quot;wb+&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!outf) {
+    perror(<B><FONT COLOR="#BC8F8F">&quot;couldn't open fgets output file\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  handle = url_fopen(url, <B><FONT COLOR="#BC8F8F">&quot;r&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!handle) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;couldn't url_fopen() %s\n&quot;</FONT></B>, url);
+    fclose(outf);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 2;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">while</FONT></B>(!url_feof(handle)) {
+    url_fgets(buffer, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(buffer), handle);
+    fwrite(buffer, 1, strlen(buffer), outf);
+  }
+&nbsp;
+  url_fclose(handle);
+&nbsp;
+  fclose(outf);
+&nbsp;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Copy from url with fread */ </FONT></I>
+  outf = fopen(FREADFILE, <B><FONT COLOR="#BC8F8F">&quot;wb+&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!outf) {
+    perror(<B><FONT COLOR="#BC8F8F">&quot;couldn't open fread output file\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  handle = url_fopen(<B><FONT COLOR="#BC8F8F">&quot;testfile&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;r&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!handle) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;couldn't url_fopen() testfile\n&quot;</FONT></B>);
+    fclose(outf);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 2;
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">do</FONT></B> {
+    nread = url_fread(buffer, 1, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(buffer), handle);
+    fwrite(buffer, 1, nread, outf);
+  } <B><FONT COLOR="#A020F0">while</FONT></B>(nread);
+&nbsp;
+  url_fclose(handle);
+&nbsp;
+  fclose(outf);
+&nbsp;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Test rewind */ </FONT></I>
+  outf = fopen(REWINDFILE, <B><FONT COLOR="#BC8F8F">&quot;wb+&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!outf) {
+    perror(<B><FONT COLOR="#BC8F8F">&quot;couldn't open fread output file\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  handle = url_fopen(<B><FONT COLOR="#BC8F8F">&quot;testfile&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;r&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!handle) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;couldn't url_fopen() testfile\n&quot;</FONT></B>);
+    fclose(outf);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 2;
+  }
+&nbsp;
+  nread = url_fread(buffer, 1, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(buffer), handle);
+  fwrite(buffer, 1, nread, outf);
+  url_rewind(handle);
+&nbsp;
+  buffer[0]=<B><FONT COLOR="#BC8F8F">'\n'</FONT></B>;
+  fwrite(buffer, 1, 1, outf);
+&nbsp;
+  nread = url_fread(buffer, 1, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(buffer), handle);
+  fwrite(buffer, 1, nread, outf);
+&nbsp;
+  url_fclose(handle);
+&nbsp;
+  fclose(outf);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;<I><FONT COLOR="#B22222">/* all done */ </FONT></I>
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

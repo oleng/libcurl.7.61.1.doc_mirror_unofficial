@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - href_extractor.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>href_extractor.c</b></div>
+<h1> href_extractor.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/href_extractor.c">Download href_extractor.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 2012 - 2016, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Uses the &quot;Streaming HTML parser&quot; to extract the href pieces in a streaming
+ * manner from a downloaded HTML.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/*
+ * The HTML parser is found at http://code.google.com/p/htmlstreamparser/
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;htmlstreamparser.h&gt;</FONT></B>
+&nbsp;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_callback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *buffer, size_t size, size_t nmemb,
+                             <B><FONT COLOR="#228B22">void</FONT></B> *hsp)
+{
+  size_t realsize = size * nmemb, p;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(p = 0; p &lt; realsize; p++) {
+    html_parser_char_parse(hsp, ((<B><FONT COLOR="#228B22">char</FONT></B> *)buffer)[p]);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(html_parser_cmp_tag(hsp, <B><FONT COLOR="#BC8F8F">&quot;a&quot;</FONT></B>, 1))
+      <B><FONT COLOR="#A020F0">if</FONT></B>(html_parser_cmp_attr(hsp, <B><FONT COLOR="#BC8F8F">&quot;href&quot;</FONT></B>, 4))
+        <B><FONT COLOR="#A020F0">if</FONT></B>(html_parser_is_in(hsp, HTML_VALUE_ENDED)) {
+          html_parser_val(hsp)[html_parser_val_length(hsp)] = <B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+          printf(<B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, html_parser_val(hsp));
+        }
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> realsize;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> tag[1], attr[4], val[128];
+  CURL *curl;
+  HTMLSTREAMPARSER *hsp;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc != 2) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Usage: %s URL\n&quot;</FONT></B>, argv[0]);
+    <B><FONT COLOR="#A020F0">return</FONT></B> EXIT_FAILURE;
+  }
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  hsp = html_parser_init();
+&nbsp;
+  html_parser_set_tag_to_lower(hsp, 1);
+  html_parser_set_attr_to_lower(hsp, 1);
+  html_parser_set_tag_buffer(hsp, tag, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(tag));
+  html_parser_set_attr_buffer(hsp, attr, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(attr));
+  html_parser_set_val_buffer(hsp, val, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(val)-1);
+&nbsp;
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, argv[1]);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_callback);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, hsp);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>, 1L);
+&nbsp;
+  <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+  html_parser_cleanup(hsp);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> EXIT_SUCCESS;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>
