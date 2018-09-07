@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_NETRC</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_NETRC</b></div>
+<h1> CURLOPT_NETRC explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_NETRC - request that .netrc is used <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_NETRC, long level); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">This parameter controls the preference <span Class="emphasis">level</span> of libcurl between using user names and passwords from your <span Class="emphasis">~/.netrc</span> file, relative to user names and passwords in the URL supplied with <a Class="emphasis" href="CURLOPT_URL.html">CURLOPT_URL</a>. On Windows, libcurl will use the file as <span Class="emphasis">%HOME%/_netrc</span>, but you can also tell libcurl a different file name to use with <a Class="emphasis" href="CURLOPT_NETRC_FILE.html">CURLOPT_NETRC_FILE</a>.
+<p class="level0">libcurl uses a user name (and supplied or prompted password) supplied with <a Class="emphasis" href="CURLOPT_USERPWD.html">CURLOPT_USERPWD</a> or <a Class="emphasis" href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a> in preference to any of the options controlled by this parameter.
+<p class="level0">Only machine name, user name and password are taken into account (init macros and similar things aren't supported).
+<p class="level0">libcurl does not verify that the file has the correct properties set (as the standard Unix ftp client does). It should only be readable by user.
+<p class="level0"><span Class="emphasis">level</span> should be set to one of the values described below.
+<p class="level0">
+<p class="level0"><a name="CURLNETRCOPTIONAL"></a><span class="nroffip">CURL_NETRC_OPTIONAL</span>
+<p class="level1">The use of your <span Class="emphasis">~/.netrc</span> file is optional, and information in the URL is to be preferred.  The file will be scanned for the host and user name (to find the password only) or for the host only, to find the first user name and password after that <span Class="emphasis">machine</span>, which ever information is not specified in the URL.
+<p class="level1">Undefined values of the option will have this effect.
+<p class="level0"><a name="CURLNETRCIGNORED"></a><span class="nroffip">CURL_NETRC_IGNORED</span>
+<p class="level1">The library will ignore the file and use only the information in the URL.
+<p class="level1">This is the default.
+<p class="level0"><a name="CURLNETRCREQUIRED"></a><span class="nroffip">CURL_NETRC_REQUIRED</span>
+<p class="level1">This value tells the library that use of the file is required, to ignore the information in the URL, and to search the file for the host only. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">CURL_NETRC_IGNORED <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">Most <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; CURLcode ret;
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/");
+&nbsp; curl_easy_setopt(curl, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
+&nbsp; ret = curl_easy_perform(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Always <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_USERPWD.html">CURLOPT_USERPWD</a>, <a Class="manpage" href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a>, <a Class="manpage" href="CURLOPT_NETRC_FILE.html">CURLOPT_NETRC_FILE</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

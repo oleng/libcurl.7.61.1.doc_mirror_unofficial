@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_HEADEROPT</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_HEADEROPT</b></div>
+<h1> CURLOPT_HEADEROPT explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_HEADEROPT - set how to send HTTP headers <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_HEADEROPT, long bitmask); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a long that is a bitmask of options of how to deal with headers. The two mutually exclusive options are:
+<p class="level0"><span Class="bold">CURLHEADER_UNIFIED</span> - the headers specified in <a Class="emphasis" href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a> will be used in requests both to servers and proxies. With this option enabled, <a Class="emphasis" href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a> will not have any effect.
+<p class="level0"><span Class="bold">CURLHEADER_SEPARATE</span> - makes <a Class="emphasis" href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a> headers only get sent to a server and not to a proxy. Proxy headers must be set with <a Class="emphasis" href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a> to get used. Note that if a non-CONNECT request is sent to a proxy, libcurl will send both server headers and proxy headers. When doing CONNECT, libcurl will send <a Class="emphasis" href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a> headers only to the proxy and then <a Class="emphasis" href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a> headers only to the server. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">CURLHEADER_SEPARATE (changed in 7.42.1, used CURLHEADER_UNIFIED before then) <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">HTTP <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; CURLcode ret;
+&nbsp; struct curl_slist *list;
+&nbsp; list = curl_slist_append(NULL, "Shoesize: 10");
+&nbsp; list = curl_slist_append(list, "Accept:");
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+&nbsp; curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:8080");
+&nbsp;
+&nbsp; /* HTTPS over a proxy makes a separate CONNECT to the proxy, so tell
+&nbsp;    libcurl to not send the custom headers to the proxy. Keep them
+&nbsp;    separate! */
+&nbsp; curl_easy_setopt(curl, CURLOPT_HEADEROPT, CURLHEADER_SEPARATE);
+&nbsp; ret = curl_easy_perform(curl);
+&nbsp; curl_easy_cleanup(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.37.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, <a Class="manpage" href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

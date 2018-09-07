@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_PROXY_SSL_OPTIONS</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_PROXY_SSL_OPTIONS</b></div>
+<h1> CURLOPT_PROXY_SSL_OPTIONS explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_PROXY_SSL_OPTIONS - set proxy SSL behavior options <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_PROXY_SSL_OPTIONS, long bitmask); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a long with a bitmask to tell libcurl about specific SSL behaviors.
+<p class="level0"><span Class="emphasis">CURLSSLOPT_ALLOW_BEAST</span> tells libcurl to not attempt to use any workarounds for a security flaw in the SSL3 and TLS1.0 protocols.  If this option isn't used or this bit is set to 0, the SSL layer libcurl uses may use a work-around for this flaw although it might cause interoperability problems with some (older) SSL implementations. WARNING: avoiding this work-around lessens the security, and by setting this option to 1 you ask for exactly that.  This option is only supported for DarwinSSL, NSS and OpenSSL.
+<p class="level0"><span Class="emphasis">CURLSSLOPT_NO_REVOKE</span> tells libcurl to disable certificate revocation checks for those SSL backends where such behavior is present. <span class="bold">Currently this option is only supported for WinSSL (the native Windows SSL library), with an exception in the case of Windows' Untrusted Publishers blacklist which it seems can't be bypassed.</span> This option may have broader support to accommodate other SSL backends in the future. <a href="https://curl.haxx.se/docs/ssl-compared.html">https://curl.haxx.se/docs/ssl-compared.html</a>
+<p class="level0"><a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">0 <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All <a name="AVAILABLE"></a><h2 class="nroffsh">AVAILABLE</h2>
+<p class="level0">Added in 7.52.0 <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+&nbsp; curl_easy_setopt(curl, CURLOPT_PROXY, "https://proxy");
+&nbsp; /* weaken TLS only for use with silly proxies */
+&nbsp; curl_easy_setopt(curl, CURLOPT_PROXY_SSL_OPTIONS, CURLSSLOPT_ALLOW_BEAST |
+&nbsp;                  CURLSSLOPT_NO_REVOKE);
+&nbsp; ret = curl_easy_perform(curl);
+&nbsp; curl_easy_cleanup(curl);
+}
+</pre>
+<p class="level0"><a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_PROXY_SSLVERSION.html">CURLOPT_PROXY_SSLVERSION</a>, <a Class="manpage" href="CURLOPT_PROXY_SSL_CIPHER_LIST.html">CURLOPT_PROXY_SSL_CIPHER_LIST</a>, <a Class="manpage" href="CURLOPT_SSLVERSION.html">CURLOPT_SSLVERSION</a>, <a Class="manpage" href="CURLOPT_SSL_CIPHER_LIST.html">CURLOPT_SSL_CIPHER_LIST</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

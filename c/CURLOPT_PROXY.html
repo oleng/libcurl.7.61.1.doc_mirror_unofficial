@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_PROXY</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_PROXY</b></div>
+<h1> CURLOPT_PROXY explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_PROXY - set proxy to use <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLOPT_PROXY, char *proxy); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Set the <span Class="emphasis">proxy</span> to use for the upcoming request. The parameter should be a char * to a zero terminated string holding the host name or dotted numerical IP address. A numerical IPv6 address must be written within [brackets].
+<p class="level0">To specify port number in this string, append :[port] to the end of the host name. The proxy's port number may optionally be specified with the separate option <a Class="emphasis" href="CURLOPT_PROXYPORT.html">CURLOPT_PROXYPORT</a>. If not specified, libcurl will default to using port 1080 for proxies.
+<p class="level0">The proxy string may be prefixed with [scheme]:// to specify which kind of proxy is used.
+<p class="level0">
+<p class="level1">
+<p class="level0"><a name="http"></a><span class="nroffip">http://</span>
+<p class="level1">HTTP Proxy. Default when no scheme or proxy type is specified.
+<p class="level0"><a name="https"></a><span class="nroffip">https://</span>
+<p class="level1">HTTPS Proxy. (Added in 7.52.0 for OpenSSL, GnuTLS and NSS)
+<p class="level0"><a name="socks4"></a><span class="nroffip">socks4://</span>
+<p class="level1">SOCKS4 Proxy.
+<p class="level0"><a name="socks4a"></a><span class="nroffip">socks4a://</span>
+<p class="level1">SOCKS4a Proxy. Proxy resolves URL hostname.
+<p class="level0"><a name="socks5"></a><span class="nroffip">socks5://</span>
+<p class="level1">SOCKS5 Proxy.
+<p class="level0"><a name="socks5h"></a><span class="nroffip">socks5h://</span>
+<p class="level1">SOCKS5 Proxy. Proxy resolves URL hostname.
+<p class="level0">
+<p class="level0">Without a scheme prefix, <a Class="emphasis" href="CURLOPT_PROXYTYPE.html">CURLOPT_PROXYTYPE</a> can be used to specify which kind of proxy the string identifies.
+<p class="level0">When you tell the library to use an HTTP proxy, libcurl will transparently convert operations to HTTP even if you specify an FTP URL etc. This may have an impact on what other features of the library you can use, such as <a Class="emphasis" href="CURLOPT_QUOTE.html">CURLOPT_QUOTE</a> and similar FTP specifics that don't work unless you tunnel through the HTTP proxy. Such tunneling is activated with <a Class="emphasis" href="CURLOPT_HTTPPROXYTUNNEL.html">CURLOPT_HTTPPROXYTUNNEL</a>.
+<p class="level0">Setting the proxy string to "" (an empty string) will explicitly disable the use of a proxy, even if there is an environment variable set for it.
+<p class="level0">A proxy host string can also include protocol scheme (<a href="http://)">http://)</a> and embedded user + password.
+<p class="level0">The application does not have to keep the string around after setting this option. <a name="Environment"></a><h2 class="nroffsh">Environment variables</h2>
+<p class="level0">libcurl respects the proxy environment variables named <span Class="bold">http_proxy</span>, <span Class="bold">ftp_proxy</span>, <span Class="bold">sftp_proxy</span> etc. If set, libcurl will use the specified proxy for that URL scheme. So for a "FTP://" URL, the <span Class="bold">ftp_proxy</span> is considered. <span Class="bold">all_proxy</span> is used if no protocol specific proxy was set.
+<p class="level0">If <span Class="bold">no_proxy</span> (or <span Class="bold">NO_PROXY</span>) is set, it is the exact equivalent of setting the <a Class="emphasis" href="CURLOPT_NOPROXY.html">CURLOPT_NOPROXY</a> option.
+<p class="level0">The <a Class="emphasis" href="CURLOPT_PROXY.html">CURLOPT_PROXY</a> and <a Class="emphasis" href="CURLOPT_NOPROXY.html">CURLOPT_NOPROXY</a> options override environment variables. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">Default is NULL, meaning no proxy is used.
+<p class="level0">When you set a host name to use, do not assume that there's any particular single port number used widely for proxies. Specify it! <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All except file://. Note that some protocols don't do very well over proxy. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "http://example.com/file.txt");
+&nbsp; curl_easy_setopt(curl, CURLOPT_PROXY, "http://proxy:80");
+&nbsp; curl_easy_perform(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Since 7.14.1 the proxy environment variable names can include the protocol scheme.
+<p class="level0">Since 7.21.7 the proxy string supports the socks protocols as "schemes".
+<p class="level0">Since 7.50.2, unsupported schemes in proxy strings cause libcurl to return error. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if proxies are supported, <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not, or <a href="libcurl-errors.html#CURLEOUTOFMEMORY">CURLE_OUT_OF_MEMORY</a> if there was insufficient heap space. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_PROXYPORT.html">CURLOPT_PROXYPORT</a>, <a Class="manpage" href="CURLOPT_HTTPPROXYTUNNEL.html">CURLOPT_HTTPPROXYTUNNEL</a>, <a Class="manpage" href="CURLOPT_PROXYTYPE.html">CURLOPT_PROXYTYPE</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>
