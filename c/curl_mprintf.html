@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_mprintf()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_mprintf</b></div>
+<h1> curl_mprintf - formatted output </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_maprintf, curl_mfprintf, curl_mprintf, curl_msnprintf, curl_msprintf curl_mvaprintf, curl_mvfprintf, curl_mvprintf, curl_mvsnprintf, curl_mvsprintf - formatted output conversion <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/mprintf.h&gt;</span>
+<p class="level0"><span Class="bold">int curl_mprintf(const char * format , ...);</span> <br><span Class="bold">int curl_mfprintf(FILE * fd , const char * format , ...);</span> <br><span Class="bold">int curl_msprintf(char * buffer , const char * format , ...);</span> <br><span Class="bold">int curl_msnprintf(char * buffer , size_t  maxlength , const char * format , ...);</span> <br><span Class="bold">int curl_mvprintf(const char * format , va_list  args );</span> <br><span Class="bold">int curl_mvfprintf(FILE * fd , const char * format , va_list  args );</span> <br><span Class="bold">int curl_mvsprintf(char * buffer , const char * format , va_list  args );</span> <br><span Class="bold">int curl_mvsnprintf(char * buffer , size_t  maxlength , const char * format , va_list  args );</span> <br><span Class="bold">char *curl_maprintf(const char * format , ...);</span> <br><span Class="bold">char *curl_mvaprintf(const char * format , va_list  args );</span> <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">These are all functions that produce output according to a format string and given arguments. These are mostly clones of the well-known C-style functions and there will be no detailed explanation of all available formatting rules and usage here.
+<p class="level0">See this table for notable exceptions.
+<p class="level1">
+<p class="level1"><span Class="bold">curl_mprintf()</span> Normal printf() clone.
+<p class="level1"><span Class="bold">curl_mfprintf()</span> Normal fprintf() clone.
+<p class="level1"><span Class="bold">curl_msprintf()</span> Normal sprintf() clone.
+<p class="level1"><span Class="bold">curl_msnprintf()</span> snprintf() clone. Many systems don't have this. It is just like <span Class="bold">sprintf</span> but with an extra argument after the buffer that specifies the length of the target buffer.
+<p class="level1"><span Class="bold">curl_mvprintf()</span> Normal vprintf() clone.
+<p class="level1"><span Class="bold">curl_mvfprintf()</span> Normal vfprintf() clone.
+<p class="level1"><span Class="bold">curl_mvsprintf()</span> Normal vsprintf() clone.
+<p class="level1"><span Class="bold">curl_mvsnprintf()</span> vsnprintf() clone.  Many systems don't have this. It is just like <span Class="bold">vsprintf</span> but with an extra argument after the buffer that specifies the length of the target buffer.
+<p class="level1"><span Class="bold">curl_maprintf()</span> Like printf() but returns the output string as a malloc()ed string. The returned string must be free()ed by the receiver.
+<p class="level1"><span Class="bold">curl_mvaprintf()</span> Like curl_maprintf() but takes a va_list pointer argument instead of a variable amount of arguments.
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">These functions will be removed from the public libcurl API in the future. Do not use them in any new programs or projects. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">The <span Class="bold">curl_maprintf</span> and <span Class="bold">curl_mvaprintf</span> functions return a pointer to a newly allocated string, or NULL if it failed.
+<p class="level0">All other functions return the number of characters they actually outputted. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><span Class="manpage">printf (3)</span>, <span Class="manpage">sprintf (3)</span>, <span Class="manpage">fprintf (3)</span>, <span Class="manpage">vprintf (3)</span><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

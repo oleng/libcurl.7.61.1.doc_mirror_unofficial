@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - ABI</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../curl.css">
+<link rel="shortcut icon" href="../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="index.html" class="menuitem" title="Front page of the libcurl section">libcurl index</a>
+<a href="abi.html" class="itemselect">ABI</a>
+<a href="c/index.html" class="menuitem" title="Functions provided by libcurl ">API</a>
+<a href="bindings.html" class="menuitem" title="Using libcurl powers within your language of choice! ">Bindings</a>
+<a href="competitors.html" class="menuitem" title="Figure what competing libraries there are ">Competitors</a>
+<a href="c/example.html" class="menuitem" title="Educational snippets of code ">Examples</a>
+<a href="features.html" class="menuitem" title="What makes libcurl special ">Features</a>
+<a href="https://curl.haxx.se/mail/list.cgi?list=curl-library" class="menuitem" title="curl-library mailing list info and archives">Mailing List</a>
+<a href="relatedlibs.html" class="menuitem" title="Related libraries that you might find useful together with libcurl">Related Libs</a>
+<a href="using/index.html" class="menuitem" title="How to use libcurl section">Using libcurl</a>
+<a href="security.html" class="menuitem" title="libcurl security considerations">Security</a>
+<a href="c/libcurl-tutorial.html" class="menuitem" title="libcurl programming tutorial">Tutorial</a>
+<a href="theysay.html" class="menuitem" title="What developers using libcurl say about it">Testimonials</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="abi.html">libcurl</a> / <b>libcurl binary interface</b></div>
+<h1>ABI - Application Binary Interface</h1>
+<p>"ABI" describes the low-level interface between an application program and a
+ library. Calling conventions, function arguments, return values, struct
+ sizes/defines and more.</p>
+<p><a href="https://en.wikipedia.org/wiki/Application_binary_interface">Wikipedia has a longer description</a></p>
+<h2>Upgrades</h2>
+<p>In the vast majority of all cases, a typical libcurl upgrade does not break
+ the ABI at all. Your application can remain using libcurl just as before,
+ only with less bugs and possibly with added new features. You need to read
+ the release notes, and if they mention an ABI break/soname bump, you may have
+ to verify that your application still builds fine and uses libcurl as it now
+ is defined to work.</p>
+<h2>Version Numbers</h2>
+<p>In libcurl land, you really can't tell by the libcurl version number if that
+ libcurl is binary compatible or not with another libcurl version.</p>
+<h2>Soname Bumps</h2>
+<p>Whenever there are changes done to the library that will cause an ABI
+ breakage, that may require your application to get attention or possibly be
+ changed to adhere to new things, we will bump the soname. Then the library
+ will get a different output name and thus can in fact be installed in
+ parallel with an older installed lib (on most systems). Thus, old
+ applications built against the previous ABI version will remain working and
+ using the older lib, while newer applications build and use the newer one.</p>
+<p>During the first seven years of libcurl releases, there have only been four
+ ABI breakages.</p>
+<p>We are determined to bump the SONAME as rarely as possible.  Ideally, we
+ never do it again.</p>
+<h2>Downgrades</h2>
+<p>Going to an older libcurl version from one you're currently using can be a
+ tricky thing. Mostly we add features and options to newer libcurls as that
+ won't break ABI or hamper existing applications. This has the implication
+ that going backwards may get you in a situation where you pick a libcurl that
+ doesn't support the options your application needs. Or possibly you even
+ downgrade so far so you cross an ABI break border and thus a different
+ soname, and then your application may need to adapt to the modified ABI.</p>
+<h2>History</h2>
+<p>The previous major library soname number bumps (breaking backwards
+  compatibility) have happened the following times:</p>
+<p>0 - libcurl 7.1,   August 2000</p>
+<p>1 - libcurl 7.5    December 2000</p>
+<p>2 - libcurl 7.7    March 2001</p>
+<p>3 - libcurl 7.12.0 June 2004</p>
+<p>4 - libcurl 7.16.0 October 2006</p>
+</div>
+</div>
+
+</BODY>
+</HTML>

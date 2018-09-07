@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_share_setopt()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_share_setopt</b></div>
+<h1> curl_share_setopt - set options for a shared object </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_share_setopt - Set options for a shared object <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0">CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option, parameter);
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Set the <span Class="emphasis">option</span> to <span Class="emphasis">parameter</span> for the given <span Class="emphasis">share</span>. <a name="OPTIONS"></a><h2 class="nroffsh">OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLSHOPTLOCKFUNC"></a><span class="nroffip">CURLSHOPT_LOCKFUNC</span>
+<p class="level1">The <span Class="emphasis">parameter</span> must be a pointer to a function matching the following prototype:
+<p class="level1">void lock_function(CURL *handle, curl_lock_data data, curl_lock_access access, void *userptr);
+<p class="level1"><span Class="emphasis">data</span> defines what data libcurl wants to lock, and you must make sure that only one lock is given at any time for each kind of data.
+<p class="level1"><span Class="emphasis">access</span> defines what access type libcurl wants, shared or single.
+<p class="level1"><span Class="emphasis">userptr</span> is the pointer you set with <a class="emphasis" href="curl_share_setopt.html#CURLSHOPTUSERDATA">CURLSHOPT_USERDATA</a>.
+<p class="level0"><a name="CURLSHOPTUNLOCKFUNC"></a><span class="nroffip">CURLSHOPT_UNLOCKFUNC</span>
+<p class="level1">The <span Class="emphasis">parameter</span> must be a pointer to a function matching the following prototype:
+<p class="level1">void unlock_function(CURL *handle, curl_lock_data data, void *userptr);
+<p class="level1"><span Class="emphasis">data</span> defines what data libcurl wants to unlock, and you must make sure that only one lock is given at any time for each kind of data.
+<p class="level1"><span Class="emphasis">userptr</span> is the pointer you set with <a class="emphasis" href="curl_share_setopt.html#CURLSHOPTUSERDATA">CURLSHOPT_USERDATA</a>.
+<p class="level0"><a name="CURLSHOPTSHARE"></a><span class="nroffip">CURLSHOPT_SHARE</span>
+<p class="level1">The <span Class="emphasis">parameter</span> specifies a type of data that should be shared. This may be set to one of the values described below.
+<p class="level2">
+<p class="level1"><a name="CURLLOCKDATACOOKIE"></a><span class="nroffip">CURL_LOCK_DATA_COOKIE</span>
+<p class="level2">Cookie data will be shared across the easy handles using this shared object.
+<p class="level1"><a name="CURLLOCKDATADNS"></a><span class="nroffip">CURL_LOCK_DATA_DNS</span>
+<p class="level2">Cached DNS hosts will be shared across the easy handles using this shared object. Note that when you use the multi interface, all easy handles added to the same multi handle will share DNS cache by default without using this option.
+<p class="level1"><a name="CURLLOCKDATASSLSESSION"></a><span class="nroffip">CURL_LOCK_DATA_SSL_SESSION</span>
+<p class="level2">SSL session IDs will be shared across the easy handles using this shared object. This will reduce the time spent in the SSL handshake when reconnecting to the same server. Note SSL session IDs are reused within the same easy handle by default. Note this symbol was added in 7.10.3 but was not implemented until 7.23.0.
+<p class="level1"><a name="CURLLOCKDATACONNECT"></a><span class="nroffip">CURL_LOCK_DATA_CONNECT</span>
+<p class="level2">Put the connection cache in the share object and make all easy handles using this share object share the connection cache. Using this, you can for example do multi-threaded libcurl use with one handle in each thread, and yet have a shared pool of unused connections and this way get way better connection re-use than if you use one separate pool in each thread.
+<p class="level2">Connections that are used for HTTP/1.1 Pipelining or HTTP/2 multiplexing only get additional transfers added to them if the existing connection is held by the same multi or easy handle. libcurl does not support doing HTTP/2 streams in different threads using a shared connection.
+<p class="level2">Support for <a class="bold" href="curl_share_setopt.html#CURLLOCKDATACONNECT">CURL_LOCK_DATA_CONNECT</a> was added in 7.57.0, but the symbol existed before this.
+<p class="level2">Note that when you use the multi interface, all easy handles added to the same multi handle will share connection cache by default without using this option.
+<p class="level1"><a name="CURLLOCKDATAPSL"></a><span class="nroffip">CURL_LOCK_DATA_PSL</span>
+<p class="level2">The Public Suffix List stored in the share object is made available to all easy handle bound to the later. Since the Public Suffix List is periodically refreshed, this avoids updates in too many different contexts.
+<p class="level2"><a class="bold" href="curl_share_setopt.html#CURLLOCKDATAPSL">CURL_LOCK_DATA_PSL</a> exists since 7.61.0.
+<p class="level2">Note that when you use the multi interface, all easy handles added to the same multi handle will share PSL cache by default without using this option.
+<p class="level1">
+<p class="level0"><a name="CURLSHOPTUNSHARE"></a><span class="nroffip">CURLSHOPT_UNSHARE</span>
+<p class="level1">This option does the opposite of <a class="emphasis" href="curl_share_setopt.html#CURLSHOPTSHARE">CURLSHOPT_SHARE</a>. It specifies that the specified <span Class="emphasis">parameter</span> will no longer be shared. Valid values are the same as those for <a class="emphasis" href="curl_share_setopt.html#CURLSHOPTSHARE">CURLSHOPT_SHARE</a>.
+<p class="level0"><a name="CURLSHOPTUSERDATA"></a><span class="nroffip">CURLSHOPT_USERDATA</span>
+<p class="level1">The <span Class="emphasis">parameter</span> allows you to specify a pointer to data that will be passed to the lock_function and unlock_function each time it is called. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0"><a href="libcurl-errors.html#CURLSHEOK">CURLSHE_OK</a> (zero) means that the option was set properly, non-zero means an error occurred as <span Class="emphasis">&lt;curl/curl.h&gt;</span> defines. See the <span Class="emphasis">libcurl-errors.3</span> man page for the full list with descriptions. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_share_cleanup.html">curl_share_cleanup</a>, <a Class="manpage" href="curl_share_init.html">curl_share_init</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

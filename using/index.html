@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>using libcurl</TITLE>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<BODY bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#808080" alink="red">
+<div class="main">
+<div class="menu">
+<a href="index.html" class="itemselect">Using libcurl </a>
+<a href="autoconf.html" class="menuitem" title="How to detect libcurl with autoconf">autoconf</a>
+<a href="curl-config.html" class="menuitem" title="How to use curl-config">curl-config</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <b>Using libcurl</b></div>
+<h1> using libcurl </h1>
+<p>
+ General hints and suggestions to consider when using libcurl in your
+ applications are gathered here.
+<ul>
+<li> Language-specific docs are found on the <a
+ href="../index.html">libcurl front page</a>
+<li> Check the full guide to the <a href="../c/index.html">C API</a>
+<li> Learn from our collection of <a href="../c/example.html">source code examples</a>
+</ul>
+<p>
+ Our suggested way on <a href="autoconf.html">how to write autoconf to find
+ libcurl</a>.
+<p>
+ Show the world you're using libcurl by showing off one of our <a
+ href="icons.html">icons</a>.
+<h1> curl-config is our friend </h1>
+<p>
+ Applications (or actually whoever) that want to find out about the libcurl
+ installation on a particular host, will find a friend in the <a
+ href="curl-config.html">curl-config</a> tool. (Added in the curl 7.7.2
+ release.)
+<p>
+ <i>What compiler flags do I need to compile libcurl using source code?</i>
+<pre>
+ curl-config --cflags
+</pre>
+<p>
+ <i>What linker options do I need when I link with libcurl?</i>
+<pre>
+ curl-config --libs
+</pre>
+<p>
+ <i>How do I know if libcurl was built with SSL support?</i>
+<pre>
+ curl-config --feature | grep SSL
+</pre>
+<p>
+ <i>What's the installed libcurl version?</i>
+<pre>
+ curl-config --version
+</pre>
+</div>
+</div>
+</BODY>
+</HTML>

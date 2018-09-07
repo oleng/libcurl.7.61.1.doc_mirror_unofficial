@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - curlgtk.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>curlgtk.c</b></div>
+<h1> curlgtk.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/curlgtk.c">Download curlgtk.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/*****************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ *  Copyright (c) 2000 David Odin (aka DindinX) for MandrakeSoft
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * use the libcurl in a gtk-threaded application
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;gtk/gtk.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+GtkWidget *Bar;
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">my_write_func</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+  <B><FONT COLOR="#A020F0">return</FONT></B> fwrite(ptr, size, nmemb, stream);
+}
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">my_read_func</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+  <B><FONT COLOR="#A020F0">return</FONT></B> fread(ptr, size, nmemb, stream);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">my_progress_func</FONT></B>(GtkWidget *bar,
+                     <B><FONT COLOR="#228B22">double</FONT></B> t, <I><FONT COLOR="#B22222">/* dltotal */ </FONT></I>
+                     <B><FONT COLOR="#228B22">double</FONT></B> d, <I><FONT COLOR="#B22222">/* dlnow */ </FONT></I>
+                     <B><FONT COLOR="#228B22">double</FONT></B> ultotal,
+                     <B><FONT COLOR="#228B22">double</FONT></B> ulnow)
+{
+<I><FONT COLOR="#B22222">/*  printf(&quot;%d / %d (%g %%)\n&quot;, d, t, d*100.0/t);*/ </FONT></I>
+  gdk_threads_enter();
+  gtk_progress_set_value(GTK_PROGRESS(bar), d*100.0/t);
+  gdk_threads_leave();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">void</FONT></B> *<B><FONT COLOR="#0000FF">my_thread</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr)
+{
+  CURL *curl;
+  CURLcode res;
+  FILE *outfile;
+  gchar *url = ptr;
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *filename = <B><FONT COLOR="#BC8F8F">&quot;test.curl&quot;</FONT></B>;
+    outfile = fopen(filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, outfile);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, my_write_func);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, my_read_func);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 0L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a>, my_progress_func);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_PROGRESSDATA.html">CURLOPT_PROGRESSDATA</a>, Bar);
+&nbsp;
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+    fclose(outfile);
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> NULL;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  GtkWidget *Window, *Frame, *Frame2;
+  GtkAdjustment *adj;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Must initialize libcurl before any threads are started */ </FONT></I>
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Init thread */ </FONT></I>
+  g_thread_init(NULL);
+&nbsp;
+  gtk_init(&amp;argc, &amp;argv);
+  Window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  Frame = gtk_frame_new(NULL);
+  gtk_frame_set_shadow_type(GTK_FRAME(Frame), GTK_SHADOW_OUT);
+  gtk_container_add(GTK_CONTAINER(Window), Frame);
+  Frame2 = gtk_frame_new(NULL);
+  gtk_frame_set_shadow_type(GTK_FRAME(Frame2), GTK_SHADOW_IN);
+  gtk_container_add(GTK_CONTAINER(Frame), Frame2);
+  gtk_container_set_border_width(GTK_CONTAINER(Frame2), 5);
+  adj = (GtkAdjustment*)gtk_adjustment_new(0, 0, 100, 0, 0, 0);
+  Bar = gtk_progress_bar_new_with_adjustment(adj);
+  gtk_container_add(GTK_CONTAINER(Frame2), Bar);
+  gtk_widget_show_all(Window);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!g_thread_create(&amp;my_thread, argv[1], FALSE, NULL) != 0)
+    g_warning(<B><FONT COLOR="#BC8F8F">&quot;can't create the thread&quot;</FONT></B>);
+&nbsp;
+&nbsp;
+  gdk_threads_enter();
+  gtk_main();
+  gdk_threads_leave();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

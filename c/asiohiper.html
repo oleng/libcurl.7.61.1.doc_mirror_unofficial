@@ -1,0 +1,521 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - asiohiper.cpp</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>asiohiper.cpp</b></div>
+<h1> asiohiper.cpp </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/asiohiper.cpp">Download asiohiper.cpp raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 2012 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * demonstrate the use of multi socket interface with boost::asio
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/*
+ * This program is in c++ and uses boost::asio instead of libevent/libev.
+ * Requires boost::asio, boost::bind and boost::system
+ *
+ * This is an adaptation of libcurl's &quot;hiperfifo.c&quot; and &quot;evhiperfifo.c&quot;
+ * sample programs. This example implements a subset of the functionality from
+ * hiperfifo.c, for full functionality refer hiperfifo.c or evhiperfifo.c
+ *
+ * Written by Lijo Antony based on hiperfifo.c by Jeff Pohlmeyer
+ *
+ * When running, the program creates an easy handle for a URL and
+ * uses the curl_multi API to fetch it.
+ *
+ * Note:
+ *  For the sake of simplicity, URL is hard coded to &quot;www.google.com&quot;
+ *
+ * This is purely a demo app, all retrieved data is simply discarded by the
+ * write callback.
+ */ </FONT></I>
+&nbsp;
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;boost/asio.hpp&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;boost/bind.hpp&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;iostream&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">MSG_OUT</FONT> stdout <I><FONT COLOR="#B22222"> </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* boost::asio related objects
+ * using global variables for simplicity
+ */ </FONT></I>
+<B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::io_service io_service;
+<B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::deadline_timer timer(io_service);
+<B><FONT COLOR="#5F9EA0">std</FONT></B>::map&lt;curl_socket_t, boost::asio::ip::tcp::socket *&gt; socket_map;
+&nbsp;
+<I><FONT COLOR="#B22222">/* Global information, common to all connections */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> _GlobalInfo
+{
+  CURLM *multi;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running;
+} GlobalInfo;
+&nbsp;
+<I><FONT COLOR="#B22222">/* Information associated with a specific easy handle */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> _ConnInfo
+{
+  CURL *easy;
+  <B><FONT COLOR="#228B22">char</FONT></B> *url;
+  GlobalInfo *global;
+  <B><FONT COLOR="#228B22">char</FONT></B> error[CURL_ERROR_SIZE];
+} ConnInfo;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">timer_cb</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> boost::system::error_code &amp; error, GlobalInfo *g);
+&nbsp;
+<I><FONT COLOR="#B22222">/* Update the event timer after curl_multi library calls */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">multi_timer_cb</FONT></B>(CURLM *multi, <B><FONT COLOR="#228B22">long</FONT></B> timeout_ms, GlobalInfo *g)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nmulti_timer_cb: timeout_ms %ld&quot;</FONT></B>, timeout_ms);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* cancel running timer */ </FONT></I>
+  timer.cancel();
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(timeout_ms &gt; 0) {
+    <I><FONT COLOR="#B22222">/* update timer */ </FONT></I>
+    timer.expires_from_now(boost::posix_time::millisec(timeout_ms));
+    timer.async_wait(boost::bind(&amp;timer_cb, _1, g));
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(timeout_ms == 0) {
+    <I><FONT COLOR="#B22222">/* call timeout function immediately */ </FONT></I>
+    <B><FONT COLOR="#5F9EA0">boost</FONT></B>::system::error_code error; <I><FONT COLOR="#B22222">/*success*/ </FONT></I>
+    timer_cb(error, g);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Die if we get a bad CURLMcode somewhere */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">mcode_or_die</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *where, CURLMcode code)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(CURLM_OK != code) {
+    <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *s;
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(code) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_CALL_MULTI_PERFORM</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_CALL_MULTI_PERFORM&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_BAD_HANDLE</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_HANDLE&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_BAD_EASY_HANDLE</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_EASY_HANDLE&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_OUT_OF_MEMORY</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_OUT_OF_MEMORY&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_INTERNAL_ERROR</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_INTERNAL_ERROR&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_UNKNOWN_OPTION</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_UNKNOWN_OPTION&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_LAST</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_LAST&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_unknown&quot;</FONT></B>;
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLM_BAD_SOCKET</FONT></B>:
+      s = <B><FONT COLOR="#BC8F8F">&quot;CURLM_BAD_SOCKET&quot;</FONT></B>;
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nERROR: %s returns %s&quot;</FONT></B>, where, s);
+      <I><FONT COLOR="#B22222">/* ignore this error */ </FONT></I>
+      <B><FONT COLOR="#A020F0">return</FONT></B>;
+    }
+&nbsp;
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nERROR: %s returns %s&quot;</FONT></B>, where, s);
+&nbsp;
+    exit(code);
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Check for completed transfers, and remove their easy handles */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">check_multi_info</FONT></B>(GlobalInfo *g)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *eff_url;
+  CURLMsg *msg;
+  <B><FONT COLOR="#228B22">int</FONT></B> msgs_left;
+  ConnInfo *conn;
+  CURL *easy;
+  CURLcode res;
+&nbsp;
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nREMAINING: %d&quot;</FONT></B>, g-&gt;still_running);
+&nbsp;
+  <B><FONT COLOR="#A020F0">while</FONT></B>((msg = <a href="curl_multi_info_read.html">curl_multi_info_read</a>(g-&gt;multi, &amp;msgs_left))) {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(msg-&gt;msg == CURLMSG_DONE) {
+      easy = msg-&gt;easy_handle;
+      res = msg-&gt;data.result;
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy, <a href="CURLINFO_PRIVATE.html">CURLINFO_PRIVATE</a>, &amp;conn);
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy, <a href="CURLINFO_EFFECTIVE_URL.html">CURLINFO_EFFECTIVE_URL</a>, &amp;eff_url);
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nDONE: %s =&gt; (%d) %s&quot;</FONT></B>, eff_url, res, conn-&gt;error);
+      <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(g-&gt;multi, easy);
+      free(conn-&gt;url);
+      <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(easy);
+      free(conn);
+    }
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Called by asio when there is an action on a socket */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">event_cb</FONT></B>(GlobalInfo *g, curl_socket_t s,
+                     <B><FONT COLOR="#228B22">int</FONT></B> action, <B><FONT COLOR="#228B22">const</FONT></B> boost::system::error_code &amp; error,
+                     <B><FONT COLOR="#228B22">int</FONT></B> *fdp)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nevent_cb: action=%d&quot;</FONT></B>, action);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(socket_map.find(s) == socket_map.end()) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nevent_cb: socket already closed&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B>;
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* make sure the event matches what are wanted */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(*fdp == action || *fdp == CURL_POLL_INOUT) {
+    CURLMcode rc;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(error)
+      action = CURL_CSELECT_ERR;
+    rc = <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(g-&gt;multi, s, action, &amp;g-&gt;still_running);
+&nbsp;
+    mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;event_cb: curl_multi_socket_action&quot;</FONT></B>, rc);
+    check_multi_info(g);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(g-&gt;still_running &lt;= 0) {
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nlast transfer done, kill timeout&quot;</FONT></B>);
+      timer.cancel();
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* keep on watching.
+     * the socket may have been closed and/or fdp may have been changed
+     * in <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(), so check them both */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!error &amp;&amp; socket_map.find(s) != socket_map.end() &amp;&amp;
+       (*fdp == action || *fdp == CURL_POLL_INOUT)) {
+      <B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::ip::tcp::socket *tcp_socket = socket_map.find(s)-&gt;second;
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(action == CURL_POLL_IN) {
+        tcp_socket-&gt;async_read_some(boost::asio::null_buffers(),
+                                    <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                                action, _1, fdp));
+      }
+      <B><FONT COLOR="#A020F0">if</FONT></B>(action == CURL_POLL_OUT) {
+        tcp_socket-&gt;async_write_some(boost::asio::null_buffers(),
+                                     <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                                 action, _1, fdp));
+      }
+    }
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Called by asio when our timeout expires */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">timer_cb</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> boost::system::error_code &amp; error, GlobalInfo *g)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!error) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\ntimer_cb: &quot;</FONT></B>);
+&nbsp;
+    CURLMcode rc;
+    rc = <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(g-&gt;multi, CURL_SOCKET_TIMEOUT, 0,
+                                  &amp;g-&gt;still_running);
+&nbsp;
+    mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;timer_cb: curl_multi_socket_action&quot;</FONT></B>, rc);
+    check_multi_info(g);
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Clean up any data */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">remsock</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> *f, GlobalInfo *g)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nremsock: &quot;</FONT></B>);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(f) {
+    free(f);
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">setsock</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> *fdp, curl_socket_t s, CURL *e, <B><FONT COLOR="#228B22">int</FONT></B> act, <B><FONT COLOR="#228B22">int</FONT></B> oldact,
+                    GlobalInfo *g)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nsetsock: socket=%d, act=%d, fdp=%p&quot;</FONT></B>, s, act, fdp);
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">std</FONT></B>::map&lt;curl_socket_t, boost::asio::ip::tcp::socket *&gt;::iterator it =
+    socket_map.find(s);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(it == socket_map.end()) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nsocket %d is a c-ares socket, ignoring&quot;</FONT></B>, s);
+    <B><FONT COLOR="#A020F0">return</FONT></B>;
+  }
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::ip::tcp::socket * tcp_socket = it-&gt;second;
+&nbsp;
+  *fdp = act;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(act == CURL_POLL_IN) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nwatching for socket to become readable&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(oldact != CURL_POLL_IN &amp;&amp; oldact != CURL_POLL_INOUT) {
+      tcp_socket-&gt;async_read_some(boost::asio::null_buffers(),
+                                  <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                              CURL_POLL_IN, _1, fdp));
+    }
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(act == CURL_POLL_OUT) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nwatching for socket to become writable&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(oldact != CURL_POLL_OUT &amp;&amp; oldact != CURL_POLL_INOUT) {
+      tcp_socket-&gt;async_write_some(boost::asio::null_buffers(),
+                                   <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                               CURL_POLL_OUT, _1, fdp));
+    }
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> <B><FONT COLOR="#A020F0">if</FONT></B>(act == CURL_POLL_INOUT) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nwatching for socket to become readable &amp; writable&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(oldact != CURL_POLL_IN &amp;&amp; oldact != CURL_POLL_INOUT) {
+      tcp_socket-&gt;async_read_some(boost::asio::null_buffers(),
+                                  <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                              CURL_POLL_IN, _1, fdp));
+    }
+    <B><FONT COLOR="#A020F0">if</FONT></B>(oldact != CURL_POLL_OUT &amp;&amp; oldact != CURL_POLL_INOUT) {
+      tcp_socket-&gt;async_write_some(boost::asio::null_buffers(),
+                                   <B><FONT COLOR="#5F9EA0">boost</FONT></B>::bind(&amp;event_cb, g, s,
+                                               CURL_POLL_OUT, _1, fdp));
+    }
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">addsock</FONT></B>(curl_socket_t s, CURL *easy, <B><FONT COLOR="#228B22">int</FONT></B> action, GlobalInfo *g)
+{
+  <I><FONT COLOR="#B22222">/* fdp is used to store current action */ </FONT></I>
+  <B><FONT COLOR="#228B22">int</FONT></B> *fdp = (<B><FONT COLOR="#228B22">int</FONT></B> *) calloc(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B>), 1);
+&nbsp;
+  setsock(fdp, s, easy, action, 0, g);
+  <a href="curl_multi_assign.html">curl_multi_assign</a>(g-&gt;multi, s, fdp);
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">sock_cb</FONT></B>(CURL *e, curl_socket_t s, <B><FONT COLOR="#228B22">int</FONT></B> what, <B><FONT COLOR="#228B22">void</FONT></B> *cbp, <B><FONT COLOR="#228B22">void</FONT></B> *sockp)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nsock_cb: socket=%d, what=%d, sockp=%p&quot;</FONT></B>, s, what, sockp);
+&nbsp;
+  GlobalInfo *g = (GlobalInfo*) cbp;
+  <B><FONT COLOR="#228B22">int</FONT></B> *actionp = (<B><FONT COLOR="#228B22">int</FONT></B> *) sockp;
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *whatstr[] = { <B><FONT COLOR="#BC8F8F">&quot;none&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;IN&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;OUT&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;INOUT&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;REMOVE&quot;</FONT></B>};
+&nbsp;
+  fprintf(MSG_OUT,
+          <B><FONT COLOR="#BC8F8F">&quot;\nsocket callback: s=%d e=%p what=%s &quot;</FONT></B>, s, e, whatstr[what]);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(what == CURL_POLL_REMOVE) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>);
+    remsock(actionp, g);
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!actionp) {
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nAdding data: %s&quot;</FONT></B>, whatstr[what]);
+      addsock(s, e, what, g);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      fprintf(MSG_OUT,
+              <B><FONT COLOR="#BC8F8F">&quot;\nChanging action from %s to %s&quot;</FONT></B>,
+              whatstr[*actionp], whatstr[what]);
+      setsock(actionp, s, e, what, *actionp, g);
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">write_cb</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *data)
+{
+  size_t written = size * nmemb;
+  <B><FONT COLOR="#228B22">char</FONT></B> *pBuffer = (<B><FONT COLOR="#228B22">char</FONT></B> *)malloc(written + 1);
+&nbsp;
+  strncpy(pBuffer, (<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *)ptr, written);
+  pBuffer[written] = <B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+&nbsp;
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, pBuffer);
+&nbsp;
+  free(pBuffer);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> written;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">prog_cb</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *p, <B><FONT COLOR="#228B22">double</FONT></B> dltotal, <B><FONT COLOR="#228B22">double</FONT></B> dlnow, <B><FONT COLOR="#228B22">double</FONT></B> ult,
+                   <B><FONT COLOR="#228B22">double</FONT></B> uln)
+{
+  ConnInfo *conn = (ConnInfo *)p;
+&nbsp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)ult;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)uln;
+&nbsp;
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nProgress: %s (%g/%g)&quot;</FONT></B>, conn-&gt;url, dlnow, dltotal);
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nProgress: %s (%g)&quot;</FONT></B>, conn-&gt;url, ult);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_OPENSOCKETFUNCTION.html">CURLOPT_OPENSOCKETFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> curl_socket_t <B><FONT COLOR="#0000FF">opensocket</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *clientp, curlsocktype purpose,
+                                <B><FONT COLOR="#228B22">struct</FONT></B> curl_sockaddr *address)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nopensocket :&quot;</FONT></B>);
+&nbsp;
+  curl_socket_t sockfd = CURL_SOCKET_BAD;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* restrict to IPv4 */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(purpose == CURLSOCKTYPE_IPCXN &amp;&amp; address-&gt;family == AF_INET) {
+    <I><FONT COLOR="#B22222">/* create a tcp socket object */ </FONT></I>
+    <B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::ip::tcp::socket *tcp_socket =
+      new boost::asio::ip::tcp::socket(io_service);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* open it and get the native handle*/ </FONT></I>
+    <B><FONT COLOR="#5F9EA0">boost</FONT></B>::system::error_code ec;
+    tcp_socket-&gt;open(boost::asio::ip::tcp::v4(), ec);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(ec) {
+      <I><FONT COLOR="#B22222">/* An error occurred */ </FONT></I>
+      <B><FONT COLOR="#5F9EA0">std</FONT></B>::cout &lt;&lt; std::endl &lt;&lt; <B><FONT COLOR="#BC8F8F">&quot;Couldn't open socket [&quot;</FONT></B> &lt;&lt; ec &lt;&lt; <B><FONT COLOR="#BC8F8F">&quot;][&quot;</FONT></B> &lt;&lt;
+        ec.message() &lt;&lt; <B><FONT COLOR="#BC8F8F">&quot;]&quot;</FONT></B>;
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nERROR: Returning CURL_SOCKET_BAD to signal error&quot;</FONT></B>);
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      sockfd = tcp_socket-&gt;native_handle();
+      fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nOpened socket %d&quot;</FONT></B>, sockfd);
+&nbsp;
+      <I><FONT COLOR="#B22222">/* save it for monitoring */ </FONT></I>
+      socket_map.insert(std::pair&lt;curl_socket_t,
+                        <B><FONT COLOR="#5F9EA0">boost</FONT></B>::asio::ip::tcp::socket *&gt;(sockfd, tcp_socket));
+    }
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> sockfd;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* <a href="CURLOPT_CLOSESOCKETFUNCTION.html">CURLOPT_CLOSESOCKETFUNCTION</a> */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">close_socket</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *clientp, curl_socket_t item)
+{
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\nclose_socket : %d&quot;</FONT></B>, item);
+&nbsp;
+  <B><FONT COLOR="#5F9EA0">std</FONT></B>::map&lt;curl_socket_t, boost::asio::ip::tcp::socket *&gt;::iterator it =
+    socket_map.find(item);
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(it != socket_map.end()) {
+    delete it-&gt;second;
+    socket_map.erase(it);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* Create a new easy handle, and add it to the global curl_multi */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">new_conn</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *url, GlobalInfo *g)
+{
+  ConnInfo *conn;
+  CURLMcode rc;
+&nbsp;
+  conn = (ConnInfo *) calloc(1, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(ConnInfo));
+&nbsp;
+  conn-&gt;easy = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!conn-&gt;easy) {
+    fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\n<a href="curl_easy_init.html">curl_easy_init</a>() failed, exiting!&quot;</FONT></B>);
+    exit(2);
+  }
+&nbsp;
+  conn-&gt;global = g;
+  conn-&gt;url = strdup(url);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, conn-&gt;url);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, write_cb);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, &amp;conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a>, conn-&gt;error);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a>, conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a>, prog_cb);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_PROGRESSDATA.html">CURLOPT_PROGRESSDATA</a>, conn);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_LOW_SPEED_TIME.html">CURLOPT_LOW_SPEED_TIME</a>, 3L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_LOW_SPEED_LIMIT.html">CURLOPT_LOW_SPEED_LIMIT</a>, 10L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* call this function to get a socket */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_OPENSOCKETFUNCTION.html">CURLOPT_OPENSOCKETFUNCTION</a>, opensocket);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* call this function to close a socket */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(conn-&gt;easy, <a href="CURLOPT_CLOSESOCKETFUNCTION.html">CURLOPT_CLOSESOCKETFUNCTION</a>, close_socket);
+&nbsp;
+  fprintf(MSG_OUT,
+          <B><FONT COLOR="#BC8F8F">&quot;\nAdding easy %p to multi %p (%s)&quot;</FONT></B>, conn-&gt;easy, g-&gt;multi, url);
+  rc = <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(g-&gt;multi, conn-&gt;easy);
+  mcode_or_die(<B><FONT COLOR="#BC8F8F">&quot;new_conn: curl_multi_add_handle&quot;</FONT></B>, rc);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* note that the add_handle() will set a time-out to trigger very soon so
+     that the necessary socket_action() call will be called by this app */ </FONT></I>
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  GlobalInfo g;
+&nbsp;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)argc;
+  (<B><FONT COLOR="#228B22">void</FONT></B>)argv;
+&nbsp;
+  memset(&amp;g, 0, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(GlobalInfo));
+  g.multi = <a href="curl_multi_init.html">curl_multi_init</a>();
+&nbsp;
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g.multi, <a href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a>, sock_cb);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g.multi, <a href="CURLMOPT_SOCKETDATA.html">CURLMOPT_SOCKETDATA</a>, &amp;g);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g.multi, <a href="CURLMOPT_TIMERFUNCTION.html">CURLMOPT_TIMERFUNCTION</a>, multi_timer_cb);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(g.multi, <a href="CURLMOPT_TIMERDATA.html">CURLMOPT_TIMERDATA</a>, &amp;g);
+&nbsp;
+  new_conn((<B><FONT COLOR="#228B22">char</FONT></B> *)<B><FONT COLOR="#BC8F8F">&quot;www.google.com&quot;</FONT></B>, &amp;g);  <I><FONT COLOR="#B22222">/* add a URL */ </FONT></I>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* enter io_service run loop */ </FONT></I>
+  io_service.run();
+&nbsp;
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(g.multi);
+&nbsp;
+  fprintf(MSG_OUT, <B><FONT COLOR="#BC8F8F">&quot;\ndone.\n&quot;</FONT></B>);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

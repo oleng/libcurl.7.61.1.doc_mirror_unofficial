@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>curl_multi_info_read</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>libcurl</b></div>
+<h1> curl_multi_info_read - read multi stack info </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_multi_info_read - read multi stack informationals <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLMsg *curl_multi_info_read( CURLM *multi_handle, &nbsp;                              int *msgs_in_queue);
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Ask the multi handle if there are any messages/informationals from the individual transfers. Messages may include informationals such as an error code from the transfer or just the fact that a transfer is completed. More details on these should be written down as well.
+<p class="level0">Repeated calls to this function will return a new struct each time, until a NULL is returned as a signal that there is no more to get at this point. The integer pointed to with <span Class="emphasis">msgs_in_queue</span> will contain the number of remaining messages after this function was called.
+<p class="level0">When you fetch a message using this function, it is removed from the internal queue so calling this function again will not return the same message again. It will instead return new messages at each new invoke until the queue is emptied.
+<p class="level0"><span Class="bold">WARNING:</span> The data the returned pointer points to will not survive calling <a Class="emphasis" href="curl_multi_cleanup.html">curl_multi_cleanup</a>, <a Class="emphasis" href="curl_multi_remove_handle.html">curl_multi_remove_handle</a> or <a Class="emphasis" href="curl_easy_cleanup.html">curl_easy_cleanup</a>.
+<p class="level0">The 'CURLMsg' struct is very simple and only contains very basic information. If more involved information is wanted, the particular "easy handle" is present in that struct and can be used in subsequent regular <a Class="emphasis" href="curl_easy_getinfo.html">curl_easy_getinfo</a> calls (or similar):
+<p class="level0"><pre class="level0">
+&nbsp;struct CURLMsg {
+&nbsp;  CURLMSG msg;       /* what this message means */
+&nbsp;  CURL *easy_handle; /* the handle it concerns */
+&nbsp;  union {
+&nbsp;    void *whatever;    /* message-specific data */
+&nbsp;    CURLcode result;   /* return code for transfer */
+&nbsp;  } data;
+&nbsp;};
+</pre>
+<p class="level0">When <span Class="bold">msg</span> is <span Class="emphasis">CURLMSG_DONE</span>, the message identifies a transfer that is done, and then <span Class="bold">result</span> contains the return code for the easy handle that just completed.
+<p class="level0">At this point, there are no other <span Class="bold">msg</span> types defined. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+struct CURLMsg *m;
+&nbsp;
+/* call curl_multi_perform or curl_multi_socket_action first, then loop
+&nbsp;  through and check if there are any transfers that have completed */
+&nbsp;
+do {
+&nbsp; int msgq = 0;
+&nbsp; m = curl_multi_info_read(multi_handle, &msgq);
+&nbsp; if(m && (m-&gt;msg == CURLMSG_DONE)) {
+&nbsp;   CURL *e = m-&gt;easy_handle;
+&nbsp;   transfers--;
+&nbsp;   curl_multi_remove_handle(multi_handle, e);
+&nbsp;   curl_easy_cleanup(e);
+&nbsp; }
+} while(m);
+</pre>
+<p class="level0"><a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">A pointer to a filled-in struct, or NULL if it failed or ran out of structs. It also writes the number of messages left in the queue (after this read) in the integer the second argument points to. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_multi_cleanup.html">curl_multi_cleanup</a>, <a Class="manpage" href="curl_multi_init.html">curl_multi_init</a>, <a Class="manpage" href="curl_multi_perform.html">curl_multi_perform</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

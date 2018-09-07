@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - cookie_interface.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>cookie_interface.c</b></div>
+<h1> cookie_interface.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/cookie_interface.c">Download cookie_interface.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Import and export cookies with COOKIELIST.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;errno.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;time.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B>
+<B><FONT COLOR="#0000FF">print_cookies</FONT></B>(CURL *curl)
+{
+  CURLcode res;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *cookies;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *nc;
+  <B><FONT COLOR="#228B22">int</FONT></B> i;
+&nbsp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;Cookies, curl knows:\n&quot;</FONT></B>);
+  res = <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(curl, <a href="CURLINFO_COOKIELIST.html">CURLINFO_COOKIELIST</a>, &amp;cookies);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl curl_easy_getinfo failed: %s\n&quot;</FONT></B>,
+            <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+    exit(1);
+  }
+  nc = cookies;
+  i = 1;
+  <B><FONT COLOR="#A020F0">while</FONT></B>(nc) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;[%d]: %s\n&quot;</FONT></B>, i, nc-&gt;data);
+    nc = nc-&gt;next;
+    i++;
+  }
+  <B><FONT COLOR="#A020F0">if</FONT></B>(i == 1) {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;(none)\n&quot;</FONT></B>);
+  }
+  <a href="curl_slist_free_all.html">curl_slist_free_all</a>(cookies);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B>
+<B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res;
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <B><FONT COLOR="#228B22">char</FONT></B> nline[256];
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;http://www.example.com/&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_COOKIEFILE.html">CURLOPT_COOKIEFILE</a>, <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>); <I><FONT COLOR="#B22222">/* start cookie engine */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl perform failed: %s\n&quot;</FONT></B>, <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+      <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+    }
+&nbsp;
+    print_cookies(curl);
+&nbsp;
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Erasing curl's knowledge of cookies!\n&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a>, <B><FONT COLOR="#BC8F8F">&quot;ALL&quot;</FONT></B>);
+&nbsp;
+    print_cookies(curl);
+&nbsp;
+    printf(<B><FONT COLOR="#BC8F8F">&quot;-----------------------------------------------\n&quot;</FONT></B>
+           <B><FONT COLOR="#BC8F8F">&quot;Setting a cookie \&quot;PREF\&quot; via cookie interface:\n&quot;</FONT></B>);
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">WIN32</FONT>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">snprintf</FONT> _snprintf
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+    <I><FONT COLOR="#B22222">/* Netscape format cookie */ </FONT></I>
+    snprintf(nline, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(nline), <B><FONT COLOR="#BC8F8F">&quot;%s\t%s\t%s\t%s\t%lu\t%s\t%s&quot;</FONT></B>,
+             <B><FONT COLOR="#BC8F8F">&quot;.example.com&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;TRUE&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;/&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;FALSE&quot;</FONT></B>,
+             (<B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B>)time(NULL) + 31337UL,
+             <B><FONT COLOR="#BC8F8F">&quot;PREF&quot;</FONT></B>, <B><FONT COLOR="#BC8F8F">&quot;hello example, i like you very much!&quot;</FONT></B>);
+    res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a>, nline);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl curl_easy_setopt failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+      <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* HTTP-header style cookie. If you use the Set-Cookie format and don't
+    specify a domain then the cookie is sent for any domain and will not be
+    modified, likely not what you intended. Starting in 7.43.0 any-domain
+    cookies will not be exported either. For more information refer to the
+    <a href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a> documentation.
+    */ </FONT></I>
+    snprintf(nline, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(nline),
+      <B><FONT COLOR="#BC8F8F">&quot;Set-Cookie: OLD_PREF=3d141414bf4209321; &quot;</FONT></B>
+      <B><FONT COLOR="#BC8F8F">&quot;expires=Sun, 17-Jan-2038 19:14:07 GMT; path=/; domain=.example.com&quot;</FONT></B>);
+    res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a>, nline);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl curl_easy_setopt failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+      <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+    }
+&nbsp;
+    print_cookies(curl);
+&nbsp;
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl perform failed: %s\n&quot;</FONT></B>, <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+      <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+    }
+&nbsp;
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Curl init failed!\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

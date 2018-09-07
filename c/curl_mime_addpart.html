@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_mime_addpart()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_mime_addpart</b></div>
+<h1> curl_mime_addpart - append a new part to a mime structure </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_mime_addpart - append a new empty part to a mime structure <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0"><span Class="bold">curl_mimepart * curl_mime_addpart(curl_mime *  mime );</span>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0"><a Class="emphasis" href="curl_mime_addpart.html">curl_mime_addpart</a> creates and appends a new empty part to the given mime structure and returns a handle to it.  The returned part handle can subsequently be populated using functions from the mime API.
+<p class="level0"><span Class="emphasis">mime</span> is the handle of the mime structure in which the new part must be appended. <a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">As long as at least one of HTTP, SMTP or IMAP is enabled. Added in 7.56.0. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">A mime part structure handle, or NULL upon failure. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+&nbsp;curl_mime *mime;
+&nbsp;curl_mimepart *part;
+&nbsp;
+&nbsp;/* create a mime handle */
+&nbsp;mime = curl_mime_init(easy);
+&nbsp;
+&nbsp;/* add a part */
+&nbsp;part = curl_mime_addpart(mime);
+&nbsp;
+&nbsp;/* continue and set name + data to the part */
+&nbsp;curl_mime_data(part, "This is the field data", CURL_ZERO_TERMINATED);
+&nbsp;curl_mime_name(part, "data");
+</pre>
+<p class="level0"><a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_mime_init.html">curl_mime_init</a>, <a Class="manpage" href="curl_mime_name.html">curl_mime_name</a>, <a Class="manpage" href="curl_mime_data.html">curl_mime_data</a>, <a Class="manpage" href="curl_mime_data_cb.html">curl_mime_data_cb</a>, <a Class="manpage" href="curl_mime_filedata.html">curl_mime_filedata</a>, <a Class="manpage" href="curl_mime_filename.html">curl_mime_filename</a>, <a Class="manpage" href="curl_mime_subparts.html">curl_mime_subparts</a>, <a Class="manpage" href="curl_mime_type.html">curl_mime_type</a>, <a Class="manpage" href="curl_mime_headers.html">curl_mime_headers</a>, <a Class="manpage" href="curl_mime_encoder.html">curl_mime_encoder</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

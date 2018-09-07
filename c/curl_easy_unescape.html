@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_easy_unescape()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_easy_unescape</b></div>
+<h1> curl_easy_unescape - URL decode the given string </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_easy_unescape - URL decodes the given string <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0"><span Class="bold">char *curl_easy_unescape( CURL * curl , const char * url</span> <span Class="bold">, int inlength , int * outlength  );</span>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">This function converts the given URL encoded input string to a "plain string" and returns that in an allocated memory area. All input characters that are URL encoded (%XX where XX is a two-digit hexadecimal number) are converted to their binary versions.
+<p class="level0">If the <span Class="bold">length</span> argument is set to 0 (zero), <a Class="emphasis" href="curl_easy_unescape.html">curl_easy_unescape</a> will use strlen() on the input <span Class="emphasis">url</span> string to find out the size.
+<p class="level0">If <span Class="bold">outlength</span> is non-NULL, the function will write the length of the returned string in the integer it points to. This allows an escaped string containing %00 to still get used properly after unescaping. Since this is a pointer to an <span Class="emphasis">int</span> type, it can only return a value up to INT_MAX so no longer string can be unescaped if the string length is returned in this parameter.
+<p class="level0">You must <a Class="emphasis" href="curl_free.html">curl_free</a> the returned string when you're done with it. <a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.15.4 and replaces the old <a Class="emphasis" href="curl_unescape.html">curl_unescape</a> function. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">A pointer to a zero terminated string or NULL if it failed. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_easy_escape.html">curl_easy_escape</a>, <a Class="manpage" href="curl_free.html">curl_free</a>, <span Class="manpage">RFC 3986</span><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

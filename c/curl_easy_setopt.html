@@ -1,0 +1,603 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_easy_setopt()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_easy_setopt</b></div>
+<h1> curl_easy_setopt - set options for a curl easy handle </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_easy_setopt - set options for a curl easy handle <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_setopt(CURL *handle, CURLoption option, parameter); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0"><a Class="emphasis" href="curl_easy_setopt.html">curl_easy_setopt</a> is used to tell libcurl how to behave. By setting the appropriate options, the application can change libcurl's behavior.  All options are set with an <span Class="emphasis">option</span> followed by a <span Class="emphasis">parameter</span>. That parameter can be a <span Class="bold">long</span>, a <span Class="bold">function pointer</span>, an <span class="bold">object pointer</span> or a <span Class="bold">curl_off_t</span>, depending on what the specific option expects. Read this manual carefully as bad input values may cause libcurl to behave badly!  You can only set one option in each function call. A typical application uses many <a Class="emphasis" href="curl_easy_setopt.html">curl_easy_setopt</a> calls in the setup phase.
+<p class="level0">Options set with this function call are valid for all forthcoming transfers performed using this <span Class="emphasis">handle</span>.  The options are not in any way reset between transfers, so if you want subsequent transfers with different options, you must change them between the transfers. You can optionally reset all options back to internal default with <a Class="emphasis" href="curl_easy_reset.html">curl_easy_reset</a>.
+<p class="level0">Strings passed to libcurl as 'char *' arguments, are copied by the library; thus the string storage associated to the pointer argument may be overwritten after <a Class="emphasis" href="curl_easy_setopt.html">curl_easy_setopt</a> returns. The only exception to this rule is really <a Class="emphasis" href="CURLOPT_POSTFIELDS.html">CURLOPT_POSTFIELDS</a>, but the alternative that copies the string <a Class="emphasis" href="CURLOPT_COPYPOSTFIELDS.html">CURLOPT_COPYPOSTFIELDS</a> has some usage characteristics you need to read up on.
+<p class="level0">The order in which the options are set does not matter.
+<p class="level0">Before version 7.17.0, strings were not copied. Instead the user was forced keep them available until libcurl no longer needed them.
+<p class="level0">The <span Class="emphasis">handle</span> is the return code from a <a Class="emphasis" href="curl_easy_init.html">curl_easy_init</a> or <a Class="emphasis" href="curl_easy_duphandle.html">curl_easy_duphandle</a> call. <a name="BEHAVIOR"></a><h2 class="nroffsh">BEHAVIOR OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTVERBOSE"></a><span class="nroffip">CURLOPT_VERBOSE</span>
+<p class="level1">Display verbose information. See <a Class="emphasis" href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>
+<p class="level0"><a name="CURLOPTHEADER"></a><span class="nroffip">CURLOPT_HEADER</span>
+<p class="level1">Include the header in the body output. See <a Class="emphasis" href="CURLOPT_HEADER.html">CURLOPT_HEADER</a>
+<p class="level0"><a name="CURLOPTNOPROGRESS"></a><span class="nroffip">CURLOPT_NOPROGRESS</span>
+<p class="level1">Shut off the progress meter. See <a Class="emphasis" href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>
+<p class="level0"><a name="CURLOPTNOSIGNAL"></a><span class="nroffip">CURLOPT_NOSIGNAL</span>
+<p class="level1">Do not install signal handlers. See <a Class="emphasis" href="CURLOPT_NOSIGNAL.html">CURLOPT_NOSIGNAL</a>
+<p class="level0"><a name="CURLOPTWILDCARDMATCH"></a><span class="nroffip">CURLOPT_WILDCARDMATCH</span>
+<p class="level1">Transfer multiple files according to a file name pattern. See <a Class="emphasis" href="CURLOPT_WILDCARDMATCH.html">CURLOPT_WILDCARDMATCH</a> <a name="CALLBACK"></a><h2 class="nroffsh">CALLBACK OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTWRITEFUNCTION"></a><span class="nroffip">CURLOPT_WRITEFUNCTION</span>
+<p class="level1">Callback for writing data. See <a Class="emphasis" href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>
+<p class="level0"><a name="CURLOPTWRITEDATA"></a><span class="nroffip">CURLOPT_WRITEDATA</span>
+<p class="level1">Data pointer to pass to the write callback. See <a Class="emphasis" href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>
+<p class="level0"><a name="CURLOPTREADFUNCTION"></a><span class="nroffip">CURLOPT_READFUNCTION</span>
+<p class="level1">Callback for reading data. See <a Class="emphasis" href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>
+<p class="level0"><a name="CURLOPTREADDATA"></a><span class="nroffip">CURLOPT_READDATA</span>
+<p class="level1">Data pointer to pass to the read callback. See <a Class="emphasis" href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>
+<p class="level0"><a name="CURLOPTIOCTLFUNCTION"></a><span class="nroffip">CURLOPT_IOCTLFUNCTION</span>
+<p class="level1">Callback for I/O operations. See <a Class="emphasis" href="CURLOPT_IOCTLFUNCTION.html">CURLOPT_IOCTLFUNCTION</a>
+<p class="level0"><a name="CURLOPTIOCTLDATA"></a><span class="nroffip">CURLOPT_IOCTLDATA</span>
+<p class="level1">Data pointer to pass to the I/O callback. See <a Class="emphasis" href="CURLOPT_IOCTLDATA.html">CURLOPT_IOCTLDATA</a>
+<p class="level0"><a name="CURLOPTSEEKFUNCTION"></a><span class="nroffip">CURLOPT_SEEKFUNCTION</span>
+<p class="level1">Callback for seek operations. See <a Class="emphasis" href="CURLOPT_SEEKFUNCTION.html">CURLOPT_SEEKFUNCTION</a>
+<p class="level0"><a name="CURLOPTSEEKDATA"></a><span class="nroffip">CURLOPT_SEEKDATA</span>
+<p class="level1">Data pointer to pass to the seek callback. See <a Class="emphasis" href="CURLOPT_SEEKDATA.html">CURLOPT_SEEKDATA</a>
+<p class="level0"><a name="CURLOPTSOCKOPTFUNCTION"></a><span class="nroffip">CURLOPT_SOCKOPTFUNCTION</span>
+<p class="level1">Callback for sockopt operations. See <a Class="emphasis" href="CURLOPT_SOCKOPTFUNCTION.html">CURLOPT_SOCKOPTFUNCTION</a>
+<p class="level0"><a name="CURLOPTSOCKOPTDATA"></a><span class="nroffip">CURLOPT_SOCKOPTDATA</span>
+<p class="level1">Data pointer to pass to the sockopt callback. See <a Class="emphasis" href="CURLOPT_SOCKOPTDATA.html">CURLOPT_SOCKOPTDATA</a>
+<p class="level0"><a name="CURLOPTOPENSOCKETFUNCTION"></a><span class="nroffip">CURLOPT_OPENSOCKETFUNCTION</span>
+<p class="level1">Callback for socket creation. See <a Class="emphasis" href="CURLOPT_OPENSOCKETFUNCTION.html">CURLOPT_OPENSOCKETFUNCTION</a>
+<p class="level0"><a name="CURLOPTOPENSOCKETDATA"></a><span class="nroffip">CURLOPT_OPENSOCKETDATA</span>
+<p class="level1">Data pointer to pass to the open socket callback. See <a Class="emphasis" href="CURLOPT_OPENSOCKETDATA.html">CURLOPT_OPENSOCKETDATA</a>
+<p class="level0"><a name="CURLOPTCLOSESOCKETFUNCTION"></a><span class="nroffip">CURLOPT_CLOSESOCKETFUNCTION</span>
+<p class="level1">Callback for closing socket. See <a Class="emphasis" href="CURLOPT_CLOSESOCKETFUNCTION.html">CURLOPT_CLOSESOCKETFUNCTION</a>
+<p class="level0"><a name="CURLOPTCLOSESOCKETDATA"></a><span class="nroffip">CURLOPT_CLOSESOCKETDATA</span>
+<p class="level1">Data pointer to pass to the close socket callback. See <a Class="emphasis" href="CURLOPT_CLOSESOCKETDATA.html">CURLOPT_CLOSESOCKETDATA</a>
+<p class="level0"><a name="CURLOPTPROGRESSFUNCTION"></a><span class="nroffip">CURLOPT_PROGRESSFUNCTION</span>
+<p class="level1">OBSOLETE callback for progress meter. See <a Class="emphasis" href="CURLOPT_PROGRESSFUNCTION.html">CURLOPT_PROGRESSFUNCTION</a>
+<p class="level0"><a name="CURLOPTPROGRESSDATA"></a><span class="nroffip">CURLOPT_PROGRESSDATA</span>
+<p class="level1">Data pointer to pass to the progress meter callback. See <a Class="emphasis" href="CURLOPT_PROGRESSDATA.html">CURLOPT_PROGRESSDATA</a>
+<p class="level0"><a name="CURLOPTXFERINFOFUNCTION"></a><span class="nroffip">CURLOPT_XFERINFOFUNCTION</span>
+<p class="level1">Callback for progress meter. See <a Class="emphasis" href="CURLOPT_XFERINFOFUNCTION.html">CURLOPT_XFERINFOFUNCTION</a>
+<p class="level0"><a name="CURLOPTXFERINFODATA"></a><span class="nroffip">CURLOPT_XFERINFODATA</span>
+<p class="level1">Data pointer to pass to the progress meter callback. See <a Class="emphasis" href="CURLOPT_XFERINFODATA.html">CURLOPT_XFERINFODATA</a>
+<p class="level0"><a name="CURLOPTHEADERFUNCTION"></a><span class="nroffip">CURLOPT_HEADERFUNCTION</span>
+<p class="level1">Callback for writing received headers. See <a Class="emphasis" href="CURLOPT_HEADERFUNCTION.html">CURLOPT_HEADERFUNCTION</a>
+<p class="level0"><a name="CURLOPTHEADERDATA"></a><span class="nroffip">CURLOPT_HEADERDATA</span>
+<p class="level1">Data pointer to pass to the header callback. See <a Class="emphasis" href="CURLOPT_HEADERDATA.html">CURLOPT_HEADERDATA</a>
+<p class="level0"><a name="CURLOPTDEBUGFUNCTION"></a><span class="nroffip">CURLOPT_DEBUGFUNCTION</span>
+<p class="level1">Callback for debug information. See <a Class="emphasis" href="CURLOPT_DEBUGFUNCTION.html">CURLOPT_DEBUGFUNCTION</a>
+<p class="level0"><a name="CURLOPTDEBUGDATA"></a><span class="nroffip">CURLOPT_DEBUGDATA</span>
+<p class="level1">Data pointer to pass to the debug callback. See <a Class="emphasis" href="CURLOPT_DEBUGDATA.html">CURLOPT_DEBUGDATA</a>
+<p class="level0"><a name="CURLOPTSSLCTXFUNCTION"></a><span class="nroffip">CURLOPT_SSL_CTX_FUNCTION</span>
+<p class="level1">Callback for SSL context logic. See <a Class="emphasis" href="CURLOPT_SSL_CTX_FUNCTION.html">CURLOPT_SSL_CTX_FUNCTION</a>
+<p class="level0"><a name="CURLOPTSSLCTXDATA"></a><span class="nroffip">CURLOPT_SSL_CTX_DATA</span>
+<p class="level1">Data pointer to pass to the SSL context callback. See <a Class="emphasis" href="CURLOPT_SSL_CTX_DATA.html">CURLOPT_SSL_CTX_DATA</a>
+<p class="level0"><a name="CURLOPTCONVTONETWORKFUNCTION"></a><span class="nroffip">CURLOPT_CONV_TO_NETWORK_FUNCTION</span>
+<p class="level1">Callback for code base conversion. See <a Class="emphasis" href="CURLOPT_CONV_TO_NETWORK_FUNCTION.html">CURLOPT_CONV_TO_NETWORK_FUNCTION</a>
+<p class="level0"><a name="CURLOPTCONVFROMNETWORKFUNCTION"></a><span class="nroffip">CURLOPT_CONV_FROM_NETWORK_FUNCTION</span>
+<p class="level1">Callback for code base conversion. See <a Class="emphasis" href="CURLOPT_CONV_FROM_NETWORK_FUNCTION.html">CURLOPT_CONV_FROM_NETWORK_FUNCTION</a>
+<p class="level0"><a name="CURLOPTCONVFROMUTF8FUNCTION"></a><span class="nroffip">CURLOPT_CONV_FROM_UTF8_FUNCTION</span>
+<p class="level1">Callback for code base conversion. See <a Class="emphasis" href="CURLOPT_CONV_FROM_UTF8_FUNCTION.html">CURLOPT_CONV_FROM_UTF8_FUNCTION</a>
+<p class="level0"><a name="CURLOPTINTERLEAVEFUNCTION"></a><span class="nroffip">CURLOPT_INTERLEAVEFUNCTION</span>
+<p class="level1">Callback for RTSP interleaved data. See <a Class="emphasis" href="CURLOPT_INTERLEAVEFUNCTION.html">CURLOPT_INTERLEAVEFUNCTION</a>
+<p class="level0"><a name="CURLOPTINTERLEAVEDATA"></a><span class="nroffip">CURLOPT_INTERLEAVEDATA</span>
+<p class="level1">Data pointer to pass to the RTSP interleave callback. See <a Class="emphasis" href="CURLOPT_INTERLEAVEDATA.html">CURLOPT_INTERLEAVEDATA</a>
+<p class="level0"><a name="CURLOPTCHUNKBGNFUNCTION"></a><span class="nroffip">CURLOPT_CHUNK_BGN_FUNCTION</span>
+<p class="level1">Callback for wildcard download start of chunk. See <a Class="emphasis" href="CURLOPT_CHUNK_BGN_FUNCTION.html">CURLOPT_CHUNK_BGN_FUNCTION</a>
+<p class="level0"><a name="CURLOPTCHUNKENDFUNCTION"></a><span class="nroffip">CURLOPT_CHUNK_END_FUNCTION</span>
+<p class="level1">Callback for wildcard download end of chunk. See <a Class="emphasis" href="CURLOPT_CHUNK_END_FUNCTION.html">CURLOPT_CHUNK_END_FUNCTION</a>
+<p class="level0"><a name="CURLOPTCHUNKDATA"></a><span class="nroffip">CURLOPT_CHUNK_DATA</span>
+<p class="level1">Data pointer to pass to the chunk callbacks. See <a Class="emphasis" href="CURLOPT_CHUNK_DATA.html">CURLOPT_CHUNK_DATA</a>
+<p class="level0"><a name="CURLOPTFNMATCHFUNCTION"></a><span class="nroffip">CURLOPT_FNMATCH_FUNCTION</span>
+<p class="level1">Callback for wildcard matching. See <a Class="emphasis" href="CURLOPT_FNMATCH_FUNCTION.html">CURLOPT_FNMATCH_FUNCTION</a>
+<p class="level0"><a name="CURLOPTFNMATCHDATA"></a><span class="nroffip">CURLOPT_FNMATCH_DATA</span>
+<p class="level1">Data pointer to pass to the wildcard matching callback. See <a Class="emphasis" href="CURLOPT_FNMATCH_DATA.html">CURLOPT_FNMATCH_DATA</a>
+<p class="level0"><a name="CURLOPTSUPPRESSCONNECTHEADERS"></a><span class="nroffip">CURLOPT_SUPPRESS_CONNECT_HEADERS</span>
+<p class="level1">Suppress proxy CONNECT response headers from user callbacks. See <a Class="emphasis" href="CURLOPT_SUPPRESS_CONNECT_HEADERS.html">CURLOPT_SUPPRESS_CONNECT_HEADERS</a>
+<p class="level0"><a name="CURLOPTRESOLVERSTARTFUNCTION"></a><span class="nroffip">CURLOPT_RESOLVER_START_FUNCTION</span>
+<p class="level1">Callback to be called before a new resolve request is started. See <a Class="emphasis" href="CURLOPT_RESOLVER_START_FUNCTION.html">CURLOPT_RESOLVER_START_FUNCTION</a>
+<p class="level0"><a name="CURLOPTRESOLVERSTARTDATA"></a><span class="nroffip">CURLOPT_RESOLVER_START_DATA</span>
+<p class="level1">Data pointer to pass to resolver start callback. See <a Class="emphasis" href="CURLOPT_RESOLVER_START_DATA.html">CURLOPT_RESOLVER_START_DATA</a> <a name="ERROR"></a><h2 class="nroffsh">ERROR OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTERRORBUFFER"></a><span class="nroffip">CURLOPT_ERRORBUFFER</span>
+<p class="level1">Error message buffer. See <a Class="emphasis" href="CURLOPT_ERRORBUFFER.html">CURLOPT_ERRORBUFFER</a>
+<p class="level0"><a name="CURLOPTSTDERR"></a><span class="nroffip">CURLOPT_STDERR</span>
+<p class="level1">stderr replacement stream. See <a Class="emphasis" href="CURLOPT_STDERR.html">CURLOPT_STDERR</a>
+<p class="level0"><a name="CURLOPTFAILONERROR"></a><span class="nroffip">CURLOPT_FAILONERROR</span>
+<p class="level1">Fail on HTTP 4xx errors. <a Class="emphasis" href="CURLOPT_FAILONERROR.html">CURLOPT_FAILONERROR</a>
+<p class="level0"><a name="CURLOPTKEEPSENDINGONERROR"></a><span class="nroffip">CURLOPT_KEEP_SENDING_ON_ERROR</span>
+<p class="level1">Keep sending on HTTP &gt;= 300 errors. <a Class="emphasis" href="CURLOPT_KEEP_SENDING_ON_ERROR.html">CURLOPT_KEEP_SENDING_ON_ERROR</a> <a name="NETWORK"></a><h2 class="nroffsh">NETWORK OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTURL"></a><span class="nroffip">CURLOPT_URL</span>
+<p class="level1">URL to work on. See <a Class="emphasis" href="CURLOPT_URL.html">CURLOPT_URL</a>
+<p class="level0"><a name="CURLOPTPATHASIS"></a><span class="nroffip">CURLOPT_PATH_AS_IS</span>
+<p class="level1">Disable squashing /../ and /./ sequences in the path. See <a Class="emphasis" href="CURLOPT_PATH_AS_IS.html">CURLOPT_PATH_AS_IS</a>
+<p class="level0"><a name="CURLOPTPROTOCOLS"></a><span class="nroffip">CURLOPT_PROTOCOLS</span>
+<p class="level1">Allowed protocols. See <a Class="emphasis" href="CURLOPT_PROTOCOLS.html">CURLOPT_PROTOCOLS</a>
+<p class="level0"><a name="CURLOPTREDIRPROTOCOLS"></a><span class="nroffip">CURLOPT_REDIR_PROTOCOLS</span>
+<p class="level1">Protocols to allow redirects to. See <a Class="emphasis" href="CURLOPT_REDIR_PROTOCOLS.html">CURLOPT_REDIR_PROTOCOLS</a>
+<p class="level0"><a name="CURLOPTDEFAULTPROTOCOL"></a><span class="nroffip">CURLOPT_DEFAULT_PROTOCOL</span>
+<p class="level1">Default protocol. See <a Class="emphasis" href="CURLOPT_DEFAULT_PROTOCOL.html">CURLOPT_DEFAULT_PROTOCOL</a>
+<p class="level0"><a name="CURLOPTPROXY"></a><span class="nroffip">CURLOPT_PROXY</span>
+<p class="level1">Proxy to use. See <a Class="emphasis" href="CURLOPT_PROXY.html">CURLOPT_PROXY</a>
+<p class="level0"><a name="CURLOPTPREPROXY"></a><span class="nroffip">CURLOPT_PRE_PROXY</span>
+<p class="level1">Socks proxy to use. See <a Class="emphasis" href="CURLOPT_PRE_PROXY.html">CURLOPT_PRE_PROXY</a>
+<p class="level0"><a name="CURLOPTPROXYPORT"></a><span class="nroffip">CURLOPT_PROXYPORT</span>
+<p class="level1">Proxy port to use. See <a Class="emphasis" href="CURLOPT_PROXYPORT.html">CURLOPT_PROXYPORT</a>
+<p class="level0"><a name="CURLOPTPROXYTYPE"></a><span class="nroffip">CURLOPT_PROXYTYPE</span>
+<p class="level1">Proxy type. See <a Class="emphasis" href="CURLOPT_PROXYTYPE.html">CURLOPT_PROXYTYPE</a>
+<p class="level0"><a name="CURLOPTNOPROXY"></a><span class="nroffip">CURLOPT_NOPROXY</span>
+<p class="level1">Filter out hosts from proxy use. <a Class="emphasis" href="CURLOPT_NOPROXY.html">CURLOPT_NOPROXY</a>
+<p class="level0"><a name="CURLOPTHTTPPROXYTUNNEL"></a><span class="nroffip">CURLOPT_HTTPPROXYTUNNEL</span>
+<p class="level1">Tunnel through the HTTP proxy. <a Class="emphasis" href="CURLOPT_HTTPPROXYTUNNEL.html">CURLOPT_HTTPPROXYTUNNEL</a>
+<p class="level0"><a name="CURLOPTCONNECTTO"></a><span class="nroffip">CURLOPT_CONNECT_TO</span>
+<p class="level1">Connect to a specific host and port. See <a Class="emphasis" href="CURLOPT_CONNECT_TO.html">CURLOPT_CONNECT_TO</a>
+<p class="level0"><a name="CURLOPTSOCKS5AUTH"></a><span class="nroffip">CURLOPT_SOCKS5_AUTH</span>
+<p class="level1">Socks5 authentication methods. See <a Class="emphasis" href="CURLOPT_SOCKS5_AUTH.html">CURLOPT_SOCKS5_AUTH</a>
+<p class="level0"><a name="CURLOPTSOCKS5GSSAPISERVICE"></a><span class="nroffip">CURLOPT_SOCKS5_GSSAPI_SERVICE</span>
+<p class="level1">Socks5 GSSAPI service name. <a Class="emphasis" href="CURLOPT_SOCKS5_GSSAPI_SERVICE.html">CURLOPT_SOCKS5_GSSAPI_SERVICE</a>
+<p class="level0"><a name="CURLOPTSOCKS5GSSAPINEC"></a><span class="nroffip">CURLOPT_SOCKS5_GSSAPI_NEC</span>
+<p class="level1">Socks5 GSSAPI NEC mode. See <a Class="emphasis" href="CURLOPT_SOCKS5_GSSAPI_NEC.html">CURLOPT_SOCKS5_GSSAPI_NEC</a>
+<p class="level0"><a name="CURLOPTPROXYSERVICENAME"></a><span class="nroffip">CURLOPT_PROXY_SERVICE_NAME</span>
+<p class="level1">Proxy authentication service name. <a Class="emphasis" href="CURLOPT_PROXY_SERVICE_NAME.html">CURLOPT_PROXY_SERVICE_NAME</a>
+<p class="level0"><a name="CURLOPTHAPROXYPROTOCOL"></a><span class="nroffip">CURLOPT_HAPROXYPROTOCOL</span>
+<p class="level1">Send an HAProxy PROXY protocol v1 header. See <a Class="emphasis" href="CURLOPT_HAPROXYPROTOCOL.html">CURLOPT_HAPROXYPROTOCOL</a>
+<p class="level0"><a name="CURLOPTSERVICENAME"></a><span class="nroffip">CURLOPT_SERVICE_NAME</span>
+<p class="level1">Authentication service name. <a Class="emphasis" href="CURLOPT_SERVICE_NAME.html">CURLOPT_SERVICE_NAME</a>
+<p class="level0"><a name="CURLOPTINTERFACE"></a><span class="nroffip">CURLOPT_INTERFACE</span>
+<p class="level1">Bind connection locally to this. See <a Class="emphasis" href="CURLOPT_INTERFACE.html">CURLOPT_INTERFACE</a>
+<p class="level0"><a name="CURLOPTLOCALPORT"></a><span class="nroffip">CURLOPT_LOCALPORT</span>
+<p class="level1">Bind connection locally to this port. See <a Class="emphasis" href="CURLOPT_LOCALPORT.html">CURLOPT_LOCALPORT</a>
+<p class="level0"><a name="CURLOPTLOCALPORTRANGE"></a><span class="nroffip">CURLOPT_LOCALPORTRANGE</span>
+<p class="level1">Bind connection locally to port range. See <a Class="emphasis" href="CURLOPT_LOCALPORTRANGE.html">CURLOPT_LOCALPORTRANGE</a>
+<p class="level0"><a name="CURLOPTDNSCACHETIMEOUT"></a><span class="nroffip">CURLOPT_DNS_CACHE_TIMEOUT</span>
+<p class="level1">Timeout for DNS cache. See <a Class="emphasis" href="CURLOPT_DNS_CACHE_TIMEOUT.html">CURLOPT_DNS_CACHE_TIMEOUT</a>
+<p class="level0"><a name="CURLOPTDNSUSEGLOBALCACHE"></a><span class="nroffip">CURLOPT_DNS_USE_GLOBAL_CACHE</span>
+<p class="level1">OBSOLETE Enable global DNS cache. See <a Class="emphasis" href="CURLOPT_DNS_USE_GLOBAL_CACHE.html">CURLOPT_DNS_USE_GLOBAL_CACHE</a>
+<p class="level0"><a name="CURLOPTDOHURL"></a><span class="nroffip">CURLOPT_DOH_URL</span>
+<p class="level1">Use this DOH server for name resolves. See <a Class="emphasis" href="CURLOPT_DOH_URL.html">CURLOPT_DOH_URL</a>
+<p class="level0"><a name="CURLOPTBUFFERSIZE"></a><span class="nroffip">CURLOPT_BUFFERSIZE</span>
+<p class="level1">Ask for alternate buffer size. See <a Class="emphasis" href="CURLOPT_BUFFERSIZE.html">CURLOPT_BUFFERSIZE</a>
+<p class="level0"><a name="CURLOPTPORT"></a><span class="nroffip">CURLOPT_PORT</span>
+<p class="level1">Port number to connect to. See <a Class="emphasis" href="CURLOPT_PORT.html">CURLOPT_PORT</a>
+<p class="level0"><a name="CURLOPTTCPFASTOPEN"></a><span class="nroffip">CURLOPT_TCP_FASTOPEN</span>
+<p class="level1">Enable TFO, TCP Fast Open. See <a Class="emphasis" href="CURLOPT_TCP_FASTOPEN.html">CURLOPT_TCP_FASTOPEN</a>
+<p class="level0"><a name="CURLOPTTCPNODELAY"></a><span class="nroffip">CURLOPT_TCP_NODELAY</span>
+<p class="level1">Disable the Nagle algorithm. See <a Class="emphasis" href="CURLOPT_TCP_NODELAY.html">CURLOPT_TCP_NODELAY</a>
+<p class="level0"><a name="CURLOPTADDRESSSCOPE"></a><span class="nroffip">CURLOPT_ADDRESS_SCOPE</span>
+<p class="level1">IPv6 scope for local addresses. See <a Class="emphasis" href="CURLOPT_ADDRESS_SCOPE.html">CURLOPT_ADDRESS_SCOPE</a>
+<p class="level0"><a name="CURLOPTTCPKEEPALIVE"></a><span class="nroffip">CURLOPT_TCP_KEEPALIVE</span>
+<p class="level1">Enable TCP keep-alive. See <a Class="emphasis" href="CURLOPT_TCP_KEEPALIVE.html">CURLOPT_TCP_KEEPALIVE</a>
+<p class="level0"><a name="CURLOPTTCPKEEPIDLE"></a><span class="nroffip">CURLOPT_TCP_KEEPIDLE</span>
+<p class="level1">Idle time before sending keep-alive. See <a Class="emphasis" href="CURLOPT_TCP_KEEPIDLE.html">CURLOPT_TCP_KEEPIDLE</a>
+<p class="level0"><a name="CURLOPTTCPKEEPINTVL"></a><span class="nroffip">CURLOPT_TCP_KEEPINTVL</span>
+<p class="level1">Interval between keep-alive probes. See <a Class="emphasis" href="CURLOPT_TCP_KEEPINTVL.html">CURLOPT_TCP_KEEPINTVL</a>
+<p class="level0"><a name="CURLOPTUNIXSOCKETPATH"></a><span class="nroffip">CURLOPT_UNIX_SOCKET_PATH</span>
+<p class="level1">Path to a Unix domain socket. See <a Class="emphasis" href="CURLOPT_UNIX_SOCKET_PATH.html">CURLOPT_UNIX_SOCKET_PATH</a>
+<p class="level0"><a name="CURLOPTABSTRACTUNIXSOCKET"></a><span class="nroffip">CURLOPT_ABSTRACT_UNIX_SOCKET</span>
+<p class="level1">Path to an abstract Unix domain socket. See <a Class="emphasis" href="CURLOPT_ABSTRACT_UNIX_SOCKET.html">CURLOPT_ABSTRACT_UNIX_SOCKET</a> <a name="NAMES"></a><h2 class="nroffsh">NAMES and PASSWORDS OPTIONS (Authentication)</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTNETRC"></a><span class="nroffip">CURLOPT_NETRC</span>
+<p class="level1">Enable .netrc parsing. See <a Class="emphasis" href="CURLOPT_NETRC.html">CURLOPT_NETRC</a>
+<p class="level0"><a name="CURLOPTNETRCFILE"></a><span class="nroffip">CURLOPT_NETRC_FILE</span>
+<p class="level1">.netrc file name. See <a Class="emphasis" href="CURLOPT_NETRC_FILE.html">CURLOPT_NETRC_FILE</a>
+<p class="level0"><a name="CURLOPTUSERPWD"></a><span class="nroffip">CURLOPT_USERPWD</span>
+<p class="level1">User name and password. See <a Class="emphasis" href="CURLOPT_USERPWD.html">CURLOPT_USERPWD</a>
+<p class="level0"><a name="CURLOPTPROXYUSERPWD"></a><span class="nroffip">CURLOPT_PROXYUSERPWD</span>
+<p class="level1">Proxy user name and password. See <a Class="emphasis" href="CURLOPT_PROXYUSERPWD.html">CURLOPT_PROXYUSERPWD</a>
+<p class="level0"><a name="CURLOPTUSERNAME"></a><span class="nroffip">CURLOPT_USERNAME</span>
+<p class="level1">User name. See <a Class="emphasis" href="CURLOPT_USERNAME.html">CURLOPT_USERNAME</a>
+<p class="level0"><a name="CURLOPTPASSWORD"></a><span class="nroffip">CURLOPT_PASSWORD</span>
+<p class="level1">Password. See <a Class="emphasis" href="CURLOPT_PASSWORD.html">CURLOPT_PASSWORD</a>
+<p class="level0"><a name="CURLOPTLOGINOPTIONS"></a><span class="nroffip">CURLOPT_LOGIN_OPTIONS</span>
+<p class="level1">Login options. See <a Class="emphasis" href="CURLOPT_LOGIN_OPTIONS.html">CURLOPT_LOGIN_OPTIONS</a>
+<p class="level0"><a name="CURLOPTPROXYUSERNAME"></a><span class="nroffip">CURLOPT_PROXYUSERNAME</span>
+<p class="level1">Proxy user name. See <a Class="emphasis" href="CURLOPT_PROXYUSERNAME.html">CURLOPT_PROXYUSERNAME</a>
+<p class="level0"><a name="CURLOPTPROXYPASSWORD"></a><span class="nroffip">CURLOPT_PROXYPASSWORD</span>
+<p class="level1">Proxy password. See <a Class="emphasis" href="CURLOPT_PROXYPASSWORD.html">CURLOPT_PROXYPASSWORD</a>
+<p class="level0"><a name="CURLOPTHTTPAUTH"></a><span class="nroffip">CURLOPT_HTTPAUTH</span>
+<p class="level1">HTTP server authentication methods. See <a Class="emphasis" href="CURLOPT_HTTPAUTH.html">CURLOPT_HTTPAUTH</a>
+<p class="level0"><a name="CURLOPTTLSAUTHUSERNAME"></a><span class="nroffip">CURLOPT_TLSAUTH_USERNAME</span>
+<p class="level1">TLS authentication user name. See <a Class="emphasis" href="CURLOPT_TLSAUTH_USERNAME.html">CURLOPT_TLSAUTH_USERNAME</a>
+<p class="level0"><a name="CURLOPTPROXYTLSAUTHUSERNAME"></a><span class="nroffip">CURLOPT_PROXY_TLSAUTH_USERNAME</span>
+<p class="level1">Proxy TLS authentication user name. See <a Class="emphasis" href="CURLOPT_PROXY_TLSAUTH_USERNAME.html">CURLOPT_PROXY_TLSAUTH_USERNAME</a>
+<p class="level0"><a name="CURLOPTTLSAUTHPASSWORD"></a><span class="nroffip">CURLOPT_TLSAUTH_PASSWORD</span>
+<p class="level1">TLS authentication password. See <a Class="emphasis" href="CURLOPT_TLSAUTH_PASSWORD.html">CURLOPT_TLSAUTH_PASSWORD</a>
+<p class="level0"><a name="CURLOPTPROXYTLSAUTHPASSWORD"></a><span class="nroffip">CURLOPT_PROXY_TLSAUTH_PASSWORD</span>
+<p class="level1">Proxy TLS authentication password. See <a Class="emphasis" href="CURLOPT_PROXY_TLSAUTH_PASSWORD.html">CURLOPT_PROXY_TLSAUTH_PASSWORD</a>
+<p class="level0"><a name="CURLOPTTLSAUTHTYPE"></a><span class="nroffip">CURLOPT_TLSAUTH_TYPE</span>
+<p class="level1">TLS authentication methods. See <a Class="emphasis" href="CURLOPT_TLSAUTH_TYPE.html">CURLOPT_TLSAUTH_TYPE</a>
+<p class="level0"><a name="CURLOPTPROXYTLSAUTHTYPE"></a><span class="nroffip">CURLOPT_PROXY_TLSAUTH_TYPE</span>
+<p class="level1">Proxy TLS authentication methods. See <a Class="emphasis" href="CURLOPT_PROXY_TLSAUTH_TYPE.html">CURLOPT_PROXY_TLSAUTH_TYPE</a>
+<p class="level0"><a name="CURLOPTPROXYAUTH"></a><span class="nroffip">CURLOPT_PROXYAUTH</span>
+<p class="level1">HTTP proxy authentication methods. See <a Class="emphasis" href="CURLOPT_PROXYAUTH.html">CURLOPT_PROXYAUTH</a>
+<p class="level0"><a name="CURLOPTSASLIR"></a><span class="nroffip">CURLOPT_SASL_IR</span>
+<p class="level1">Enable SASL initial response. See <a Class="emphasis" href="CURLOPT_SASL_IR.html">CURLOPT_SASL_IR</a>
+<p class="level0"><a name="CURLOPTXOAUTH2BEARER"></a><span class="nroffip">CURLOPT_XOAUTH2_BEARER</span>
+<p class="level1">OAuth2 bearer token. See <a Class="emphasis" href="CURLOPT_XOAUTH2_BEARER.html">CURLOPT_XOAUTH2_BEARER</a>
+<p class="level0"><a name="CURLOPTDISALLOWUSERNAMEINURL"></a><span class="nroffip">CURLOPT_DISALLOW_USERNAME_IN_URL</span>
+<p class="level1">Don't allow username in URL. See <a Class="emphasis" href="CURLOPT_DISALLOW_USERNAME_IN_URL.html">CURLOPT_DISALLOW_USERNAME_IN_URL</a> <a name="HTTP"></a><h2 class="nroffsh">HTTP OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTAUTOREFERER"></a><span class="nroffip">CURLOPT_AUTOREFERER</span>
+<p class="level1">Automatically set Referer: header. See <a Class="emphasis" href="CURLOPT_AUTOREFERER.html">CURLOPT_AUTOREFERER</a>
+<p class="level0"><a name="CURLOPTACCEPTENCODING"></a><span class="nroffip">CURLOPT_ACCEPT_ENCODING</span>
+<p class="level1">Accept-Encoding and automatic decompressing data. See <a Class="emphasis" href="CURLOPT_ACCEPT_ENCODING.html">CURLOPT_ACCEPT_ENCODING</a>
+<p class="level0"><a name="CURLOPTTRANSFERENCODING"></a><span class="nroffip">CURLOPT_TRANSFER_ENCODING</span>
+<p class="level1">Request Transfer-Encoding. See <a Class="emphasis" href="CURLOPT_TRANSFER_ENCODING.html">CURLOPT_TRANSFER_ENCODING</a>
+<p class="level0"><a name="CURLOPTFOLLOWLOCATION"></a><span class="nroffip">CURLOPT_FOLLOWLOCATION</span>
+<p class="level1">Follow HTTP redirects. See <a Class="emphasis" href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>
+<p class="level0"><a name="CURLOPTUNRESTRICTEDAUTH"></a><span class="nroffip">CURLOPT_UNRESTRICTED_AUTH</span>
+<p class="level1">Do not restrict authentication to original host. <a Class="emphasis" href="CURLOPT_UNRESTRICTED_AUTH.html">CURLOPT_UNRESTRICTED_AUTH</a>
+<p class="level0"><a name="CURLOPTMAXREDIRS"></a><span class="nroffip">CURLOPT_MAXREDIRS</span>
+<p class="level1">Maximum number of redirects to follow. See <a Class="emphasis" href="CURLOPT_MAXREDIRS.html">CURLOPT_MAXREDIRS</a>
+<p class="level0"><a name="CURLOPTPOSTREDIR"></a><span class="nroffip">CURLOPT_POSTREDIR</span>
+<p class="level1">How to act on redirects after POST. See <a Class="emphasis" href="CURLOPT_POSTREDIR.html">CURLOPT_POSTREDIR</a>
+<p class="level0"><a name="CURLOPTPUT"></a><span class="nroffip">CURLOPT_PUT</span>
+<p class="level1">Issue an HTTP PUT request. See <a Class="emphasis" href="CURLOPT_PUT.html">CURLOPT_PUT</a>
+<p class="level0"><a name="CURLOPTPOST"></a><span class="nroffip">CURLOPT_POST</span>
+<p class="level1">Issue an HTTP POST request. See <a Class="emphasis" href="CURLOPT_POST.html">CURLOPT_POST</a>
+<p class="level0"><a name="CURLOPTPOSTFIELDS"></a><span class="nroffip">CURLOPT_POSTFIELDS</span>
+<p class="level1">Send a POST with this data. See <a Class="emphasis" href="CURLOPT_POSTFIELDS.html">CURLOPT_POSTFIELDS</a>
+<p class="level0"><a name="CURLOPTPOSTFIELDSIZE"></a><span class="nroffip">CURLOPT_POSTFIELDSIZE</span>
+<p class="level1">The POST data is this big. See <a Class="emphasis" href="CURLOPT_POSTFIELDSIZE.html">CURLOPT_POSTFIELDSIZE</a>
+<p class="level0"><a name="CURLOPTPOSTFIELDSIZELARGE"></a><span class="nroffip">CURLOPT_POSTFIELDSIZE_LARGE</span>
+<p class="level1">The POST data is this big. See <a Class="emphasis" href="CURLOPT_POSTFIELDSIZE_LARGE.html">CURLOPT_POSTFIELDSIZE_LARGE</a>
+<p class="level0"><a name="CURLOPTCOPYPOSTFIELDS"></a><span class="nroffip">CURLOPT_COPYPOSTFIELDS</span>
+<p class="level1">Send a POST with this data - and copy it. See <a Class="emphasis" href="CURLOPT_COPYPOSTFIELDS.html">CURLOPT_COPYPOSTFIELDS</a>
+<p class="level0"><a name="CURLOPTHTTPPOST"></a><span class="nroffip">CURLOPT_HTTPPOST</span>
+<p class="level1">Multipart formpost HTTP POST. See <a Class="emphasis" href="CURLOPT_HTTPPOST.html">CURLOPT_HTTPPOST</a>
+<p class="level0"><a name="CURLOPTREFERER"></a><span class="nroffip">CURLOPT_REFERER</span>
+<p class="level1">Referer: header. See <a Class="emphasis" href="CURLOPT_REFERER.html">CURLOPT_REFERER</a>
+<p class="level0"><a name="CURLOPTUSERAGENT"></a><span class="nroffip">CURLOPT_USERAGENT</span>
+<p class="level1">User-Agent: header. See <a Class="emphasis" href="CURLOPT_USERAGENT.html">CURLOPT_USERAGENT</a>
+<p class="level0"><a name="CURLOPTHTTPHEADER"></a><span class="nroffip">CURLOPT_HTTPHEADER</span>
+<p class="level1">Custom HTTP headers. See <a Class="emphasis" href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>
+<p class="level0"><a name="CURLOPTHEADEROPT"></a><span class="nroffip">CURLOPT_HEADEROPT</span>
+<p class="level1">Control custom headers. See <a Class="emphasis" href="CURLOPT_HEADEROPT.html">CURLOPT_HEADEROPT</a>
+<p class="level0"><a name="CURLOPTPROXYHEADER"></a><span class="nroffip">CURLOPT_PROXYHEADER</span>
+<p class="level1">Custom HTTP headers sent to proxy. See <a Class="emphasis" href="CURLOPT_PROXYHEADER.html">CURLOPT_PROXYHEADER</a>
+<p class="level0"><a name="CURLOPTHTTP200ALIASES"></a><span class="nroffip">CURLOPT_HTTP200ALIASES</span>
+<p class="level1">Alternative versions of 200 OK. See <a Class="emphasis" href="CURLOPT_HTTP200ALIASES.html">CURLOPT_HTTP200ALIASES</a>
+<p class="level0"><a name="CURLOPTCOOKIE"></a><span class="nroffip">CURLOPT_COOKIE</span>
+<p class="level1">Cookie(s) to send. See <a Class="emphasis" href="CURLOPT_COOKIE.html">CURLOPT_COOKIE</a>
+<p class="level0"><a name="CURLOPTCOOKIEFILE"></a><span class="nroffip">CURLOPT_COOKIEFILE</span>
+<p class="level1">File to read cookies from. See <a Class="emphasis" href="CURLOPT_COOKIEFILE.html">CURLOPT_COOKIEFILE</a>
+<p class="level0"><a name="CURLOPTCOOKIEJAR"></a><span class="nroffip">CURLOPT_COOKIEJAR</span>
+<p class="level1">File to write cookies to. See <a Class="emphasis" href="CURLOPT_COOKIEJAR.html">CURLOPT_COOKIEJAR</a>
+<p class="level0"><a name="CURLOPTCOOKIESESSION"></a><span class="nroffip">CURLOPT_COOKIESESSION</span>
+<p class="level1">Start a new cookie session. See <a Class="emphasis" href="CURLOPT_COOKIESESSION.html">CURLOPT_COOKIESESSION</a>
+<p class="level0"><a name="CURLOPTCOOKIELIST"></a><span class="nroffip">CURLOPT_COOKIELIST</span>
+<p class="level1">Add or control cookies. See <a Class="emphasis" href="CURLOPT_COOKIELIST.html">CURLOPT_COOKIELIST</a>
+<p class="level0"><a name="CURLOPTHTTPGET"></a><span class="nroffip">CURLOPT_HTTPGET</span>
+<p class="level1">Do an HTTP GET request. See <a Class="emphasis" href="CURLOPT_HTTPGET.html">CURLOPT_HTTPGET</a>
+<p class="level0"><a name="CURLOPTREQUESTTARGET"></a><span class="nroffip">CURLOPT_REQUEST_TARGET</span>
+<p class="level1">Set the request target. <a Class="emphasis" href="CURLOPT_REQUEST_TARGET.html">CURLOPT_REQUEST_TARGET</a>
+<p class="level0"><a name="CURLOPTHTTPVERSION"></a><span class="nroffip">CURLOPT_HTTP_VERSION</span>
+<p class="level1">HTTP version to use. <a Class="emphasis" href="CURLOPT_HTTP_VERSION.html">CURLOPT_HTTP_VERSION</a>
+<p class="level0"><a name="CURLOPTIGNORECONTENTLENGTH"></a><span class="nroffip">CURLOPT_IGNORE_CONTENT_LENGTH</span>
+<p class="level1">Ignore Content-Length. See <a Class="emphasis" href="CURLOPT_IGNORE_CONTENT_LENGTH.html">CURLOPT_IGNORE_CONTENT_LENGTH</a>
+<p class="level0"><a name="CURLOPTHTTPCONTENTDECODING"></a><span class="nroffip">CURLOPT_HTTP_CONTENT_DECODING</span>
+<p class="level1">Disable Content decoding. See <a Class="emphasis" href="CURLOPT_HTTP_CONTENT_DECODING.html">CURLOPT_HTTP_CONTENT_DECODING</a>
+<p class="level0"><a name="CURLOPTHTTPTRANSFERDECODING"></a><span class="nroffip">CURLOPT_HTTP_TRANSFER_DECODING</span>
+<p class="level1">Disable Transfer decoding. See <a Class="emphasis" href="CURLOPT_HTTP_TRANSFER_DECODING.html">CURLOPT_HTTP_TRANSFER_DECODING</a>
+<p class="level0"><a name="CURLOPTEXPECT100TIMEOUTMS"></a><span class="nroffip">CURLOPT_EXPECT_100_TIMEOUT_MS</span>
+<p class="level1">100-continue timeout. See <a Class="emphasis" href="CURLOPT_EXPECT_100_TIMEOUT_MS.html">CURLOPT_EXPECT_100_TIMEOUT_MS</a>
+<p class="level0"><a name="CURLOPTPIPEWAIT"></a><span class="nroffip">CURLOPT_PIPEWAIT</span>
+<p class="level1">Wait on connection to pipeline on it. See <a Class="emphasis" href="CURLOPT_PIPEWAIT.html">CURLOPT_PIPEWAIT</a>
+<p class="level0"><a name="CURLOPTSTREAMDEPENDS"></a><span class="nroffip">CURLOPT_STREAM_DEPENDS</span>
+<p class="level1">This HTTP/2 stream depends on another. See <a Class="emphasis" href="CURLOPT_STREAM_DEPENDS.html">CURLOPT_STREAM_DEPENDS</a>
+<p class="level0"><a name="CURLOPTSTREAMDEPENDSE"></a><span class="nroffip">CURLOPT_STREAM_DEPENDS_E</span>
+<p class="level1">This HTTP/2 stream depends on another exclusively. See <a Class="emphasis" href="CURLOPT_STREAM_DEPENDS_E.html">CURLOPT_STREAM_DEPENDS_E</a>
+<p class="level0"><a name="CURLOPTSTREAMWEIGHT"></a><span class="nroffip">CURLOPT_STREAM_WEIGHT</span>
+<p class="level1">Set this HTTP/2 stream's weight. See <a Class="emphasis" href="CURLOPT_STREAM_WEIGHT.html">CURLOPT_STREAM_WEIGHT</a> <a name="SMTP"></a><h2 class="nroffsh">SMTP OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTMAILFROM"></a><span class="nroffip">CURLOPT_MAIL_FROM</span>
+<p class="level1">Address of the sender. See <a Class="emphasis" href="CURLOPT_MAIL_FROM.html">CURLOPT_MAIL_FROM</a>
+<p class="level0"><a name="CURLOPTMAILRCPT"></a><span class="nroffip">CURLOPT_MAIL_RCPT</span>
+<p class="level1">Address of the recipients. See <a Class="emphasis" href="CURLOPT_MAIL_RCPT.html">CURLOPT_MAIL_RCPT</a>
+<p class="level0"><a name="CURLOPTMAILAUTH"></a><span class="nroffip">CURLOPT_MAIL_AUTH</span>
+<p class="level1">Authentication address. See <a Class="emphasis" href="CURLOPT_MAIL_AUTH.html">CURLOPT_MAIL_AUTH</a> <a name="TFTP"></a><h2 class="nroffsh">TFTP OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTTFTPBLKSIZE"></a><span class="nroffip">CURLOPT_TFTP_BLKSIZE</span>
+<p class="level1">TFTP block size. See <a Class="emphasis" href="CURLOPT_TFTP_BLKSIZE.html">CURLOPT_TFTP_BLKSIZE</a>
+<p class="level0"><a name="CURLOPTTFTPNOOPTIONS"></a><span class="nroffip">CURLOPT_TFTP_NO_OPTIONS</span>
+<p class="level1">Do not send TFTP options requests. See <a Class="emphasis" href="CURLOPT_TFTP_NO_OPTIONS.html">CURLOPT_TFTP_NO_OPTIONS</a> <a name="FTP"></a><h2 class="nroffsh">FTP OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTFTPPORT"></a><span class="nroffip">CURLOPT_FTPPORT</span>
+<p class="level1">Use active FTP. See <a Class="emphasis" href="CURLOPT_FTPPORT.html">CURLOPT_FTPPORT</a>
+<p class="level0"><a name="CURLOPTQUOTE"></a><span class="nroffip">CURLOPT_QUOTE</span>
+<p class="level1">Commands to run before transfer. See <a Class="emphasis" href="CURLOPT_QUOTE.html">CURLOPT_QUOTE</a>
+<p class="level0"><a name="CURLOPTPOSTQUOTE"></a><span class="nroffip">CURLOPT_POSTQUOTE</span>
+<p class="level1">Commands to run after transfer. See <a Class="emphasis" href="CURLOPT_POSTQUOTE.html">CURLOPT_POSTQUOTE</a>
+<p class="level0"><a name="CURLOPTPREQUOTE"></a><span class="nroffip">CURLOPT_PREQUOTE</span>
+<p class="level1">Commands to run just before transfer. See <a Class="emphasis" href="CURLOPT_PREQUOTE.html">CURLOPT_PREQUOTE</a>
+<p class="level0"><a name="CURLOPTAPPEND"></a><span class="nroffip">CURLOPT_APPEND</span>
+<p class="level1">Append to remote file. See <a Class="emphasis" href="CURLOPT_APPEND.html">CURLOPT_APPEND</a>
+<p class="level0"><a name="CURLOPTFTPUSEEPRT"></a><span class="nroffip">CURLOPT_FTP_USE_EPRT</span>
+<p class="level1">Use EPTR. See <a Class="emphasis" href="CURLOPT_FTP_USE_EPRT.html">CURLOPT_FTP_USE_EPRT</a>
+<p class="level0"><a name="CURLOPTFTPUSEEPSV"></a><span class="nroffip">CURLOPT_FTP_USE_EPSV</span>
+<p class="level1">Use EPSV. See <a Class="emphasis" href="CURLOPT_FTP_USE_EPSV.html">CURLOPT_FTP_USE_EPSV</a>
+<p class="level0"><a name="CURLOPTFTPUSEPRET"></a><span class="nroffip">CURLOPT_FTP_USE_PRET</span>
+<p class="level1">Use PRET. See <a Class="emphasis" href="CURLOPT_FTP_USE_PRET.html">CURLOPT_FTP_USE_PRET</a>
+<p class="level0"><a name="CURLOPTFTPCREATEMISSINGDIRS"></a><span class="nroffip">CURLOPT_FTP_CREATE_MISSING_DIRS</span>
+<p class="level1">Create missing directories on the remote server. See <a Class="emphasis" href="CURLOPT_FTP_CREATE_MISSING_DIRS.html">CURLOPT_FTP_CREATE_MISSING_DIRS</a>
+<p class="level0"><a name="CURLOPTFTPRESPONSETIMEOUT"></a><span class="nroffip">CURLOPT_FTP_RESPONSE_TIMEOUT</span>
+<p class="level1">Timeout for FTP responses. See <a Class="emphasis" href="CURLOPT_FTP_RESPONSE_TIMEOUT.html">CURLOPT_FTP_RESPONSE_TIMEOUT</a>
+<p class="level0"><a name="CURLOPTFTPALTERNATIVETOUSER"></a><span class="nroffip">CURLOPT_FTP_ALTERNATIVE_TO_USER</span>
+<p class="level1">Alternative to USER. See <a Class="emphasis" href="CURLOPT_FTP_ALTERNATIVE_TO_USER.html">CURLOPT_FTP_ALTERNATIVE_TO_USER</a>
+<p class="level0"><a name="CURLOPTFTPSKIPPASVIP"></a><span class="nroffip">CURLOPT_FTP_SKIP_PASV_IP</span>
+<p class="level1">Ignore the IP address in the PASV response. See <a Class="emphasis" href="CURLOPT_FTP_SKIP_PASV_IP.html">CURLOPT_FTP_SKIP_PASV_IP</a>
+<p class="level0"><a name="CURLOPTFTPSSLAUTH"></a><span class="nroffip">CURLOPT_FTPSSLAUTH</span>
+<p class="level1">Control how to do TLS. See <a Class="emphasis" href="CURLOPT_FTPSSLAUTH.html">CURLOPT_FTPSSLAUTH</a>
+<p class="level0"><a name="CURLOPTFTPSSLCCC"></a><span class="nroffip">CURLOPT_FTP_SSL_CCC</span>
+<p class="level1">Back to non-TLS again after authentication. See <a Class="emphasis" href="CURLOPT_FTP_SSL_CCC.html">CURLOPT_FTP_SSL_CCC</a>
+<p class="level0"><a name="CURLOPTFTPACCOUNT"></a><span class="nroffip">CURLOPT_FTP_ACCOUNT</span>
+<p class="level1">Send ACCT command. See <a Class="emphasis" href="CURLOPT_FTP_ACCOUNT.html">CURLOPT_FTP_ACCOUNT</a>
+<p class="level0"><a name="CURLOPTFTPFILEMETHOD"></a><span class="nroffip">CURLOPT_FTP_FILEMETHOD</span>
+<p class="level1">Specify how to reach files. See <a Class="emphasis" href="CURLOPT_FTP_FILEMETHOD.html">CURLOPT_FTP_FILEMETHOD</a> <a name="RTSP"></a><h2 class="nroffsh">RTSP OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTRTSPREQUEST"></a><span class="nroffip">CURLOPT_RTSP_REQUEST</span>
+<p class="level1">RTSP request. See <a Class="emphasis" href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>
+<p class="level0"><a name="CURLOPTRTSPSESSIONID"></a><span class="nroffip">CURLOPT_RTSP_SESSION_ID</span>
+<p class="level1">RTSP session-id. See <a Class="emphasis" href="CURLOPT_RTSP_SESSION_ID.html">CURLOPT_RTSP_SESSION_ID</a>
+<p class="level0"><a name="CURLOPTRTSPSTREAMURI"></a><span class="nroffip">CURLOPT_RTSP_STREAM_URI</span>
+<p class="level1">RTSP stream URI. See <a Class="emphasis" href="CURLOPT_RTSP_STREAM_URI.html">CURLOPT_RTSP_STREAM_URI</a>
+<p class="level0"><a name="CURLOPTRTSPTRANSPORT"></a><span class="nroffip">CURLOPT_RTSP_TRANSPORT</span>
+<p class="level1">RTSP Transport: header. See <a Class="emphasis" href="CURLOPT_RTSP_TRANSPORT.html">CURLOPT_RTSP_TRANSPORT</a>
+<p class="level0"><a name="CURLOPTRTSPCLIENTCSEQ"></a><span class="nroffip">CURLOPT_RTSP_CLIENT_CSEQ</span>
+<p class="level1">Client CSEQ number. See <a Class="emphasis" href="CURLOPT_RTSP_CLIENT_CSEQ.html">CURLOPT_RTSP_CLIENT_CSEQ</a>
+<p class="level0"><a name="CURLOPTRTSPSERVERCSEQ"></a><span class="nroffip">CURLOPT_RTSP_SERVER_CSEQ</span>
+<p class="level1">CSEQ number for RTSP Server-&gt;Client request. See <a Class="emphasis" href="CURLOPT_RTSP_SERVER_CSEQ.html">CURLOPT_RTSP_SERVER_CSEQ</a> <a name="PROTOCOL"></a><h2 class="nroffsh">PROTOCOL OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTTRANSFERTEXT"></a><span class="nroffip">CURLOPT_TRANSFERTEXT</span>
+<p class="level1">Use text transfer. See <a Class="emphasis" href="CURLOPT_TRANSFERTEXT.html">CURLOPT_TRANSFERTEXT</a>
+<p class="level0"><a name="CURLOPTPROXYTRANSFERMODE"></a><span class="nroffip">CURLOPT_PROXY_TRANSFER_MODE</span>
+<p class="level1">Add transfer mode to URL over proxy. See <a Class="emphasis" href="CURLOPT_PROXY_TRANSFER_MODE.html">CURLOPT_PROXY_TRANSFER_MODE</a>
+<p class="level0"><a name="CURLOPTCRLF"></a><span class="nroffip">CURLOPT_CRLF</span>
+<p class="level1">Convert newlines. See <a Class="emphasis" href="CURLOPT_CRLF.html">CURLOPT_CRLF</a>
+<p class="level0"><a name="CURLOPTRANGE"></a><span class="nroffip">CURLOPT_RANGE</span>
+<p class="level1">Range requests. See <a Class="emphasis" href="CURLOPT_RANGE.html">CURLOPT_RANGE</a>
+<p class="level0"><a name="CURLOPTRESUMEFROM"></a><span class="nroffip">CURLOPT_RESUME_FROM</span>
+<p class="level1">Resume a transfer. See <a Class="emphasis" href="CURLOPT_RESUME_FROM.html">CURLOPT_RESUME_FROM</a>
+<p class="level0"><a name="CURLOPTRESUMEFROMLARGE"></a><span class="nroffip">CURLOPT_RESUME_FROM_LARGE</span>
+<p class="level1">Resume a transfer. See <a Class="emphasis" href="CURLOPT_RESUME_FROM_LARGE.html">CURLOPT_RESUME_FROM_LARGE</a>
+<p class="level0"><a name="CURLOPTCUSTOMREQUEST"></a><span class="nroffip">CURLOPT_CUSTOMREQUEST</span>
+<p class="level1">Custom request/method. See <a Class="emphasis" href="CURLOPT_CUSTOMREQUEST.html">CURLOPT_CUSTOMREQUEST</a>
+<p class="level0"><a name="CURLOPTFILETIME"></a><span class="nroffip">CURLOPT_FILETIME</span>
+<p class="level1">Request file modification date and time. See <a Class="emphasis" href="CURLOPT_FILETIME.html">CURLOPT_FILETIME</a>
+<p class="level0"><a name="CURLOPTDIRLISTONLY"></a><span class="nroffip">CURLOPT_DIRLISTONLY</span>
+<p class="level1">List only. See <a Class="emphasis" href="CURLOPT_DIRLISTONLY.html">CURLOPT_DIRLISTONLY</a>
+<p class="level0"><a name="CURLOPTNOBODY"></a><span class="nroffip">CURLOPT_NOBODY</span>
+<p class="level1">Do not get the body contents. See <a Class="emphasis" href="CURLOPT_NOBODY.html">CURLOPT_NOBODY</a>
+<p class="level0"><a name="CURLOPTINFILESIZE"></a><span class="nroffip">CURLOPT_INFILESIZE</span>
+<p class="level1">Size of file to send. <a Class="emphasis" href="CURLOPT_INFILESIZE.html">CURLOPT_INFILESIZE</a>
+<p class="level0"><a name="CURLOPTINFILESIZELARGE"></a><span class="nroffip">CURLOPT_INFILESIZE_LARGE</span>
+<p class="level1">Size of file to send. <a Class="emphasis" href="CURLOPT_INFILESIZE_LARGE.html">CURLOPT_INFILESIZE_LARGE</a>
+<p class="level0"><a name="CURLOPTUPLOAD"></a><span class="nroffip">CURLOPT_UPLOAD</span>
+<p class="level1">Upload data. See <a Class="emphasis" href="CURLOPT_UPLOAD.html">CURLOPT_UPLOAD</a>
+<p class="level0"><a name="CURLOPTUPLOADBUFFERSIZE"></a><span class="nroffip">CURLOPT_UPLOAD_BUFFERSIZE</span>
+<p class="level1">Set upload buffer size. See <a Class="emphasis" href="https://curl.haxx.se/libcurl/c/CURLOPT_UPLOAD_BUFFERSIZE.html">CURLOPT_UPLOAD_BUFFERSIZE</a>
+<p class="level0"><a name="CURLOPTMIMEPOST"></a><span class="nroffip">CURLOPT_MIMEPOST</span>
+<p class="level1">Post/send MIME data. See <a Class="emphasis" href="CURLOPT_MIMEPOST.html">CURLOPT_MIMEPOST</a>
+<p class="level0"><a name="CURLOPTMAXFILESIZE"></a><span class="nroffip">CURLOPT_MAXFILESIZE</span>
+<p class="level1">Maximum file size to get. See <a Class="emphasis" href="CURLOPT_MAXFILESIZE.html">CURLOPT_MAXFILESIZE</a>
+<p class="level0"><a name="CURLOPTMAXFILESIZELARGE"></a><span class="nroffip">CURLOPT_MAXFILESIZE_LARGE</span>
+<p class="level1">Maximum file size to get. See <a Class="emphasis" href="CURLOPT_MAXFILESIZE_LARGE.html">CURLOPT_MAXFILESIZE_LARGE</a>
+<p class="level0"><a name="CURLOPTTIMECONDITION"></a><span class="nroffip">CURLOPT_TIMECONDITION</span>
+<p class="level1">Make a time conditional request. See <a Class="emphasis" href="CURLOPT_TIMECONDITION.html">CURLOPT_TIMECONDITION</a>
+<p class="level0"><a name="CURLOPTTIMEVALUE"></a><span class="nroffip">CURLOPT_TIMEVALUE</span>
+<p class="level1">Time value for the time conditional request. See <a Class="emphasis" href="CURLOPT_TIMEVALUE.html">CURLOPT_TIMEVALUE</a>
+<p class="level0"><a name="CURLOPTTIMEVALUELARGE"></a><span class="nroffip">CURLOPT_TIMEVALUE_LARGE</span>
+<p class="level1">Time value for the time conditional request. See <a Class="emphasis" href="CURLOPT_TIMEVALUE_LARGE.html">CURLOPT_TIMEVALUE_LARGE</a> <a name="CONNECTION"></a><h2 class="nroffsh">CONNECTION OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTTIMEOUT"></a><span class="nroffip">CURLOPT_TIMEOUT</span>
+<p class="level1">Timeout for the entire request. See <a Class="emphasis" href="CURLOPT_TIMEOUT.html">CURLOPT_TIMEOUT</a>
+<p class="level0"><a name="CURLOPTTIMEOUTMS"></a><span class="nroffip">CURLOPT_TIMEOUT_MS</span>
+<p class="level1">Millisecond timeout for the entire request. See <a Class="emphasis" href="CURLOPT_TIMEOUT_MS.html">CURLOPT_TIMEOUT_MS</a>
+<p class="level0"><a name="CURLOPTLOWSPEEDLIMIT"></a><span class="nroffip">CURLOPT_LOW_SPEED_LIMIT</span>
+<p class="level1">Low speed limit to abort transfer. See <a Class="emphasis" href="CURLOPT_LOW_SPEED_LIMIT.html">CURLOPT_LOW_SPEED_LIMIT</a>
+<p class="level0"><a name="CURLOPTLOWSPEEDTIME"></a><span class="nroffip">CURLOPT_LOW_SPEED_TIME</span>
+<p class="level1">Time to be below the speed to trigger low speed abort. See <a Class="emphasis" href="CURLOPT_LOW_SPEED_TIME.html">CURLOPT_LOW_SPEED_TIME</a>
+<p class="level0"><a name="CURLOPTMAXSENDSPEEDLARGE"></a><span class="nroffip">CURLOPT_MAX_SEND_SPEED_LARGE</span>
+<p class="level1">Cap the upload speed to this. See <a Class="emphasis" href="CURLOPT_MAX_SEND_SPEED_LARGE.html">CURLOPT_MAX_SEND_SPEED_LARGE</a>
+<p class="level0"><a name="CURLOPTMAXRECVSPEEDLARGE"></a><span class="nroffip">CURLOPT_MAX_RECV_SPEED_LARGE</span>
+<p class="level1">Cap the download speed to this. See <a Class="emphasis" href="CURLOPT_MAX_RECV_SPEED_LARGE.html">CURLOPT_MAX_RECV_SPEED_LARGE</a>
+<p class="level0"><a name="CURLOPTMAXCONNECTS"></a><span class="nroffip">CURLOPT_MAXCONNECTS</span>
+<p class="level1">Maximum number of connections in the connection pool. See <a Class="emphasis" href="CURLOPT_MAXCONNECTS.html">CURLOPT_MAXCONNECTS</a>
+<p class="level0"><a name="CURLOPTFRESHCONNECT"></a><span class="nroffip">CURLOPT_FRESH_CONNECT</span>
+<p class="level1">Use a new connection. <a Class="emphasis" href="CURLOPT_FRESH_CONNECT.html">CURLOPT_FRESH_CONNECT</a>
+<p class="level0"><a name="CURLOPTFORBIDREUSE"></a><span class="nroffip">CURLOPT_FORBID_REUSE</span>
+<p class="level1">Prevent subsequent connections from re-using this. See <a Class="emphasis" href="CURLOPT_FORBID_REUSE.html">CURLOPT_FORBID_REUSE</a>
+<p class="level0"><a name="CURLOPTCONNECTTIMEOUT"></a><span class="nroffip">CURLOPT_CONNECTTIMEOUT</span>
+<p class="level1">Timeout for the connection phase. See <a Class="emphasis" href="CURLOPT_CONNECTTIMEOUT.html">CURLOPT_CONNECTTIMEOUT</a>
+<p class="level0"><a name="CURLOPTCONNECTTIMEOUTMS"></a><span class="nroffip">CURLOPT_CONNECTTIMEOUT_MS</span>
+<p class="level1">Millisecond timeout for the connection phase. See <a Class="emphasis" href="CURLOPT_CONNECTTIMEOUT_MS.html">CURLOPT_CONNECTTIMEOUT_MS</a>
+<p class="level0"><a name="CURLOPTIPRESOLVE"></a><span class="nroffip">CURLOPT_IPRESOLVE</span>
+<p class="level1">IP version to resolve to. See <a Class="emphasis" href="CURLOPT_IPRESOLVE.html">CURLOPT_IPRESOLVE</a>
+<p class="level0"><a name="CURLOPTCONNECTONLY"></a><span class="nroffip">CURLOPT_CONNECT_ONLY</span>
+<p class="level1">Only connect, nothing else. See <a Class="emphasis" href="CURLOPT_CONNECT_ONLY.html">CURLOPT_CONNECT_ONLY</a>
+<p class="level0"><a name="CURLOPTUSESSL"></a><span class="nroffip">CURLOPT_USE_SSL</span>
+<p class="level1">Use TLS/SSL. See <a Class="emphasis" href="CURLOPT_USE_SSL.html">CURLOPT_USE_SSL</a>
+<p class="level0"><a name="CURLOPTRESOLVE"></a><span class="nroffip">CURLOPT_RESOLVE</span>
+<p class="level1">Provide fixed/fake name resolves. See <a Class="emphasis" href="CURLOPT_RESOLVE.html">CURLOPT_RESOLVE</a>
+<p class="level0"><a name="CURLOPTDNSINTERFACE"></a><span class="nroffip">CURLOPT_DNS_INTERFACE</span>
+<p class="level1">Bind name resolves to this interface. See <a Class="emphasis" href="CURLOPT_DNS_INTERFACE.html">CURLOPT_DNS_INTERFACE</a>
+<p class="level0"><a name="CURLOPTDNSLOCALIP4"></a><span class="nroffip">CURLOPT_DNS_LOCAL_IP4</span>
+<p class="level1">Bind name resolves to this IP4 address. See <a Class="emphasis" href="CURLOPT_DNS_LOCAL_IP4.html">CURLOPT_DNS_LOCAL_IP4</a>
+<p class="level0"><a name="CURLOPTDNSLOCALIP6"></a><span class="nroffip">CURLOPT_DNS_LOCAL_IP6</span>
+<p class="level1">Bind name resolves to this IP6 address. See <a Class="emphasis" href="CURLOPT_DNS_LOCAL_IP6.html">CURLOPT_DNS_LOCAL_IP6</a>
+<p class="level0"><a name="CURLOPTDNSSERVERS"></a><span class="nroffip">CURLOPT_DNS_SERVERS</span>
+<p class="level1">Preferred DNS servers. See <a Class="emphasis" href="CURLOPT_DNS_SERVERS.html">CURLOPT_DNS_SERVERS</a>
+<p class="level0"><a name="CURLOPTDNSSHUFFLEADDRESSES"></a><span class="nroffip">CURLOPT_DNS_SHUFFLE_ADDRESSES</span>
+<p class="level1">Shuffle addresses before use. See <a Class="emphasis" href="CURLOPT_DNS_SHUFFLE_ADDRESSES.html">CURLOPT_DNS_SHUFFLE_ADDRESSES</a>
+<p class="level0"><a name="CURLOPTACCEPTTIMEOUTMS"></a><span class="nroffip">CURLOPT_ACCEPTTIMEOUT_MS</span>
+<p class="level1">Timeout for waiting for the server's connect back to be accepted. See <a Class="emphasis" href="CURLOPT_ACCEPTTIMEOUT_MS.html">CURLOPT_ACCEPTTIMEOUT_MS</a>
+<p class="level0"><a name="CURLOPTHAPPYEYEBALLSTIMEOUTMS"></a><span class="nroffip">CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS</span>
+<p class="level1">Timeout for happy eyeballs. See <a Class="emphasis" href="CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS.html">CURLOPT_HAPPY_EYEBALLS_TIMEOUT_MS</a>
+<p class="level0"><a name="CURLOPTCONNUPKEEPINTERVALMS"></a><span class="nroffip">CURLOPT_CONN_UPKEEP_INTERVAL_MS</span>
+<p class="level1">Sets the interval at which connection upkeep are performed. See <a Class="emphasis" href="https://curl.haxx.se/libcurl/c/CURLOPT_CONN_UPKEEP_INTERVAL_MS.html">CURLOPT_CONN_UPKEEP_INTERVAL_MS</a> <a name="SSL"></a><h2 class="nroffsh">SSL and SECURITY OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTSSLCERT"></a><span class="nroffip">CURLOPT_SSLCERT</span>
+<p class="level1">Client cert. See <a Class="emphasis" href="CURLOPT_SSLCERT.html">CURLOPT_SSLCERT</a>
+<p class="level0"><a name="CURLOPTPROXYSSLCERT"></a><span class="nroffip">CURLOPT_PROXY_SSLCERT</span>
+<p class="level1">Proxy client cert. See <a Class="emphasis" href="CURLOPT_PROXY_SSLCERT.html">CURLOPT_PROXY_SSLCERT</a>
+<p class="level0"><a name="CURLOPTSSLCERTTYPE"></a><span class="nroffip">CURLOPT_SSLCERTTYPE</span>
+<p class="level1">Client cert type.  See <a Class="emphasis" href="CURLOPT_SSLCERTTYPE.html">CURLOPT_SSLCERTTYPE</a>
+<p class="level0"><a name="CURLOPTPROXYSSLCERTTYPE"></a><span class="nroffip">CURLOPT_PROXY_SSLCERTTYPE</span>
+<p class="level1">Proxy client cert type.  See <a Class="emphasis" href="CURLOPT_PROXY_SSLCERTTYPE.html">CURLOPT_PROXY_SSLCERTTYPE</a>
+<p class="level0"><a name="CURLOPTSSLKEY"></a><span class="nroffip">CURLOPT_SSLKEY</span>
+<p class="level1">Client key. See <a Class="emphasis" href="CURLOPT_SSLKEY.html">CURLOPT_SSLKEY</a>
+<p class="level0"><a name="CURLOPTPROXYSSLKEY"></a><span class="nroffip">CURLOPT_PROXY_SSLKEY</span>
+<p class="level1">Proxy client key. See <a Class="emphasis" href="CURLOPT_PROXY_SSLKEY.html">CURLOPT_PROXY_SSLKEY</a>
+<p class="level0"><a name="CURLOPTSSLKEYTYPE"></a><span class="nroffip">CURLOPT_SSLKEYTYPE</span>
+<p class="level1">Client key type. See <a Class="emphasis" href="CURLOPT_SSLKEYTYPE.html">CURLOPT_SSLKEYTYPE</a>
+<p class="level0"><a name="CURLOPTPROXYSSLKEYTYPE"></a><span class="nroffip">CURLOPT_PROXY_SSLKEYTYPE</span>
+<p class="level1">Proxy client key type. See <a Class="emphasis" href="CURLOPT_PROXY_SSLKEYTYPE.html">CURLOPT_PROXY_SSLKEYTYPE</a>
+<p class="level0"><a name="CURLOPTKEYPASSWD"></a><span class="nroffip">CURLOPT_KEYPASSWD</span>
+<p class="level1">Client key password. See <a Class="emphasis" href="CURLOPT_KEYPASSWD.html">CURLOPT_KEYPASSWD</a>
+<p class="level0"><a name="CURLOPTPROXYKEYPASSWD"></a><span class="nroffip">CURLOPT_PROXY_KEYPASSWD</span>
+<p class="level1">Proxy client key password. See <a Class="emphasis" href="CURLOPT_PROXY_KEYPASSWD.html">CURLOPT_PROXY_KEYPASSWD</a>
+<p class="level0"><a name="CURLOPTSSLENABLEALPN"></a><span class="nroffip">CURLOPT_SSL_ENABLE_ALPN</span>
+<p class="level1">Enable use of ALPN. See <a Class="emphasis" href="CURLOPT_SSL_ENABLE_ALPN.html">CURLOPT_SSL_ENABLE_ALPN</a>
+<p class="level0"><a name="CURLOPTSSLENABLENPN"></a><span class="nroffip">CURLOPT_SSL_ENABLE_NPN</span>
+<p class="level1">Enable use of NPN. See <a Class="emphasis" href="CURLOPT_SSL_ENABLE_NPN.html">CURLOPT_SSL_ENABLE_NPN</a>
+<p class="level0"><a name="CURLOPTSSLENGINE"></a><span class="nroffip">CURLOPT_SSLENGINE</span>
+<p class="level1">Use identifier with SSL engine. See <a Class="emphasis" href="CURLOPT_SSLENGINE.html">CURLOPT_SSLENGINE</a>
+<p class="level0"><a name="CURLOPTSSLENGINEDEFAULT"></a><span class="nroffip">CURLOPT_SSLENGINE_DEFAULT</span>
+<p class="level1">Default SSL engine. See <a Class="emphasis" href="CURLOPT_SSLENGINE_DEFAULT.html">CURLOPT_SSLENGINE_DEFAULT</a>
+<p class="level0"><a name="CURLOPTSSLFALSESTART"></a><span class="nroffip">CURLOPT_SSL_FALSESTART</span>
+<p class="level1">Enable TLS False Start. See <a Class="emphasis" href="CURLOPT_SSL_FALSESTART.html">CURLOPT_SSL_FALSESTART</a>
+<p class="level0"><a name="CURLOPTSSLVERSION"></a><span class="nroffip">CURLOPT_SSLVERSION</span>
+<p class="level1">SSL version to use. See <a Class="emphasis" href="CURLOPT_SSLVERSION.html">CURLOPT_SSLVERSION</a>
+<p class="level0"><a name="CURLOPTPROXYSSLVERSION"></a><span class="nroffip">CURLOPT_PROXY_SSLVERSION</span>
+<p class="level1">Proxy SSL version to use. See <a Class="emphasis" href="CURLOPT_PROXY_SSLVERSION.html">CURLOPT_PROXY_SSLVERSION</a>
+<p class="level0"><a name="CURLOPTSSLVERIFYHOST"></a><span class="nroffip">CURLOPT_SSL_VERIFYHOST</span>
+<p class="level1">Verify the host name in the SSL certificate. See <a Class="emphasis" href="CURLOPT_SSL_VERIFYHOST.html">CURLOPT_SSL_VERIFYHOST</a>
+<p class="level0"><a name="CURLOPTPROXYSSLVERIFYHOST"></a><span class="nroffip">CURLOPT_PROXY_SSL_VERIFYHOST</span>
+<p class="level1">Verify the host name in the proxy SSL certificate. See <a Class="emphasis" href="CURLOPT_PROXY_SSL_VERIFYHOST.html">CURLOPT_PROXY_SSL_VERIFYHOST</a>
+<p class="level0"><a name="CURLOPTSSLVERIFYPEER"></a><span class="nroffip">CURLOPT_SSL_VERIFYPEER</span>
+<p class="level1">Verify the SSL certificate. See <a Class="emphasis" href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>
+<p class="level0"><a name="CURLOPTPROXYSSLVERIFYPEER"></a><span class="nroffip">CURLOPT_PROXY_SSL_VERIFYPEER</span>
+<p class="level1">Verify the proxy SSL certificate. See <a Class="emphasis" href="CURLOPT_PROXY_SSL_VERIFYPEER.html">CURLOPT_PROXY_SSL_VERIFYPEER</a>
+<p class="level0"><a name="CURLOPTSSLVERIFYSTATUS"></a><span class="nroffip">CURLOPT_SSL_VERIFYSTATUS</span>
+<p class="level1">Verify the SSL certificate's status. See <a Class="emphasis" href="CURLOPT_SSL_VERIFYSTATUS.html">CURLOPT_SSL_VERIFYSTATUS</a>
+<p class="level0"><a name="CURLOPTCAINFO"></a><span class="nroffip">CURLOPT_CAINFO</span>
+<p class="level1">CA cert bundle. See <a Class="emphasis" href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a>
+<p class="level0"><a name="CURLOPTPROXYCAINFO"></a><span class="nroffip">CURLOPT_PROXY_CAINFO</span>
+<p class="level1">Proxy CA cert bundle. See <a Class="emphasis" href="CURLOPT_PROXY_CAINFO.html">CURLOPT_PROXY_CAINFO</a>
+<p class="level0"><a name="CURLOPTISSUERCERT"></a><span class="nroffip">CURLOPT_ISSUERCERT</span>
+<p class="level1">Issuer certificate. See <a Class="emphasis" href="CURLOPT_ISSUERCERT.html">CURLOPT_ISSUERCERT</a>
+<p class="level0"><a name="CURLOPTCAPATH"></a><span class="nroffip">CURLOPT_CAPATH</span>
+<p class="level1">Path to CA cert bundle. See <a Class="emphasis" href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a>
+<p class="level0"><a name="CURLOPTPROXYCAPATH"></a><span class="nroffip">CURLOPT_PROXY_CAPATH</span>
+<p class="level1">Path to proxy CA cert bundle. See <a Class="emphasis" href="CURLOPT_PROXY_CAPATH.html">CURLOPT_PROXY_CAPATH</a>
+<p class="level0"><a name="CURLOPTCRLFILE"></a><span class="nroffip">CURLOPT_CRLFILE</span>
+<p class="level1">Certificate Revocation List. See <a Class="emphasis" href="CURLOPT_CRLFILE.html">CURLOPT_CRLFILE</a>
+<p class="level0"><a name="CURLOPTPROXYCRLFILE"></a><span class="nroffip">CURLOPT_PROXY_CRLFILE</span>
+<p class="level1">Proxy Certificate Revocation List. See <a Class="emphasis" href="CURLOPT_PROXY_CRLFILE.html">CURLOPT_PROXY_CRLFILE</a>
+<p class="level0"><a name="CURLOPTCERTINFO"></a><span class="nroffip">CURLOPT_CERTINFO</span>
+<p class="level1">Extract certificate info. See <a Class="emphasis" href="CURLOPT_CERTINFO.html">CURLOPT_CERTINFO</a>
+<p class="level0"><a name="CURLOPTPINNEDPUBLICKEY"></a><span class="nroffip">CURLOPT_PINNEDPUBLICKEY</span>
+<p class="level1">Set pinned SSL public key . See <a Class="emphasis" href="CURLOPT_PINNEDPUBLICKEY.html">CURLOPT_PINNEDPUBLICKEY</a>
+<p class="level0"><a name="CURLOPTPROXYPINNEDPUBLICKEY"></a><span class="nroffip">CURLOPT_PROXY_PINNEDPUBLICKEY</span>
+<p class="level1">Set the proxy's pinned SSL public key. See <a Class="emphasis" href="CURLOPT_PROXY_PINNEDPUBLICKEY.html">CURLOPT_PROXY_PINNEDPUBLICKEY</a>
+<p class="level0"><a name="CURLOPTRANDOMFILE"></a><span class="nroffip">CURLOPT_RANDOM_FILE</span>
+<p class="level1">Provide source for entropy random data. See <a Class="emphasis" href="CURLOPT_RANDOM_FILE.html">CURLOPT_RANDOM_FILE</a>
+<p class="level0"><a name="CURLOPTEGDSOCKET"></a><span class="nroffip">CURLOPT_EGDSOCKET</span>
+<p class="level1">Identify EGD socket for entropy. See <a Class="emphasis" href="CURLOPT_EGDSOCKET.html">CURLOPT_EGDSOCKET</a>
+<p class="level0"><a name="CURLOPTSSLCIPHERLIST"></a><span class="nroffip">CURLOPT_SSL_CIPHER_LIST</span>
+<p class="level1">Ciphers to use. See <a Class="emphasis" href="CURLOPT_SSL_CIPHER_LIST.html">CURLOPT_SSL_CIPHER_LIST</a>
+<p class="level0"><a name="CURLOPTPROXYSSLCIPHERLIST"></a><span class="nroffip">CURLOPT_PROXY_SSL_CIPHER_LIST</span>
+<p class="level1">Proxy ciphers to use. See <a Class="emphasis" href="CURLOPT_PROXY_SSL_CIPHER_LIST.html">CURLOPT_PROXY_SSL_CIPHER_LIST</a>
+<p class="level0"><a name="CURLOPTTLS13CIPHERS"></a><span class="nroffip">CURLOPT_TLS13_CIPHERS</span>
+<p class="level1">TLS 1.3 cipher suites to use. See <a Class="emphasis" href="CURLOPT_TLS13_CIPHERS.html">CURLOPT_TLS13_CIPHERS</a>
+<p class="level0"><a name="CURLOPTPROXYTLS13CIPHERS"></a><span class="nroffip">CURLOPT_PROXY_TLS13_CIPHERS</span>
+<p class="level1">Proxy TLS 1.3 cipher suites to use. See <a Class="emphasis" href="CURLOPT_PROXY_TLS13_CIPHERS.html">CURLOPT_PROXY_TLS13_CIPHERS</a>
+<p class="level0"><a name="CURLOPTSSLSESSIONIDCACHE"></a><span class="nroffip">CURLOPT_SSL_SESSIONID_CACHE</span>
+<p class="level1">Disable SSL session-id cache. See <a Class="emphasis" href="CURLOPT_SSL_SESSIONID_CACHE.html">CURLOPT_SSL_SESSIONID_CACHE</a>
+<p class="level0"><a name="CURLOPTSSLOPTIONS"></a><span class="nroffip">CURLOPT_SSL_OPTIONS</span>
+<p class="level1">Control SSL behavior. See <a Class="emphasis" href="CURLOPT_SSL_OPTIONS.html">CURLOPT_SSL_OPTIONS</a>
+<p class="level0"><a name="CURLOPTPROXYSSLOPTIONS"></a><span class="nroffip">CURLOPT_PROXY_SSL_OPTIONS</span>
+<p class="level1">Control proxy SSL behavior. See <a Class="emphasis" href="CURLOPT_PROXY_SSL_OPTIONS.html">CURLOPT_PROXY_SSL_OPTIONS</a>
+<p class="level0"><a name="CURLOPTKRBLEVEL"></a><span class="nroffip">CURLOPT_KRBLEVEL</span>
+<p class="level1">Kerberos security level. See <a Class="emphasis" href="CURLOPT_KRBLEVEL.html">CURLOPT_KRBLEVEL</a>
+<p class="level0"><a name="CURLOPTGSSAPIDELEGATION"></a><span class="nroffip">CURLOPT_GSSAPI_DELEGATION</span>
+<p class="level1">Disable GSS-API delegation. See <a Class="emphasis" href="CURLOPT_GSSAPI_DELEGATION.html">CURLOPT_GSSAPI_DELEGATION</a> <a name="SSH"></a><h2 class="nroffsh">SSH OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTSSHAUTHTYPES"></a><span class="nroffip">CURLOPT_SSH_AUTH_TYPES</span>
+<p class="level1">SSH authentication types. See <a Class="emphasis" href="CURLOPT_SSH_AUTH_TYPES.html">CURLOPT_SSH_AUTH_TYPES</a>
+<p class="level0"><a name="CURLOPTSSHCOMPRESSION"></a><span class="nroffip">CURLOPT_SSH_COMPRESSION</span>
+<p class="level1">Enable SSH compression. See <a Class="emphasis" href="CURLOPT_SSH_COMPRESSION.html">CURLOPT_SSH_COMPRESSION</a>
+<p class="level0"><a name="CURLOPTSSHHOSTPUBLICKEYMD5"></a><span class="nroffip">CURLOPT_SSH_HOST_PUBLIC_KEY_MD5</span>
+<p class="level1">MD5 of host's public key. See <a Class="emphasis" href="CURLOPT_SSH_HOST_PUBLIC_KEY_MD5.html">CURLOPT_SSH_HOST_PUBLIC_KEY_MD5</a>
+<p class="level0"><a name="CURLOPTSSHPUBLICKEYFILE"></a><span class="nroffip">CURLOPT_SSH_PUBLIC_KEYFILE</span>
+<p class="level1">File name of public key. See <a Class="emphasis" href="CURLOPT_SSH_PUBLIC_KEYFILE.html">CURLOPT_SSH_PUBLIC_KEYFILE</a>
+<p class="level0"><a name="CURLOPTSSHPRIVATEKEYFILE"></a><span class="nroffip">CURLOPT_SSH_PRIVATE_KEYFILE</span>
+<p class="level1">File name of private key. See <a Class="emphasis" href="CURLOPT_SSH_PRIVATE_KEYFILE.html">CURLOPT_SSH_PRIVATE_KEYFILE</a>
+<p class="level0"><a name="CURLOPTSSHKNOWNHOSTS"></a><span class="nroffip">CURLOPT_SSH_KNOWNHOSTS</span>
+<p class="level1">File name with known hosts. See <a Class="emphasis" href="CURLOPT_SSH_KNOWNHOSTS.html">CURLOPT_SSH_KNOWNHOSTS</a>
+<p class="level0"><a name="CURLOPTSSHKEYFUNCTION"></a><span class="nroffip">CURLOPT_SSH_KEYFUNCTION</span>
+<p class="level1">Callback for known hosts handling. See <a Class="emphasis" href="CURLOPT_SSH_KEYFUNCTION.html">CURLOPT_SSH_KEYFUNCTION</a>
+<p class="level0"><a name="CURLOPTSSHKEYDATA"></a><span class="nroffip">CURLOPT_SSH_KEYDATA</span>
+<p class="level1">Custom pointer to pass to ssh key callback. See <a Class="emphasis" href="CURLOPT_SSH_KEYDATA.html">CURLOPT_SSH_KEYDATA</a> <a name="OTHER"></a><h2 class="nroffsh">OTHER OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTPRIVATE"></a><span class="nroffip">CURLOPT_PRIVATE</span>
+<p class="level1">Private pointer to store. See <a Class="emphasis" href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a>
+<p class="level0"><a name="CURLOPTSHARE"></a><span class="nroffip">CURLOPT_SHARE</span>
+<p class="level1">Share object to use. See <a Class="emphasis" href="CURLOPT_SHARE.html">CURLOPT_SHARE</a>
+<p class="level0"><a name="CURLOPTNEWFILEPERMS"></a><span class="nroffip">CURLOPT_NEW_FILE_PERMS</span>
+<p class="level1">Mode for creating new remote files. See <a Class="emphasis" href="CURLOPT_NEW_FILE_PERMS.html">CURLOPT_NEW_FILE_PERMS</a>
+<p class="level0"><a name="CURLOPTNEWDIRECTORYPERMS"></a><span class="nroffip">CURLOPT_NEW_DIRECTORY_PERMS</span>
+<p class="level1">Mode for creating new remote directories. See <a Class="emphasis" href="CURLOPT_NEW_DIRECTORY_PERMS.html">CURLOPT_NEW_DIRECTORY_PERMS</a> <a name="TELNET"></a><h2 class="nroffsh">TELNET OPTIONS</h2>
+<p class="level0">
+<p class="level0"><a name="CURLOPTTELNETOPTIONS"></a><span class="nroffip">CURLOPT_TELNETOPTIONS</span>
+<p class="level1">TELNET options. See <a Class="emphasis" href="CURLOPT_TELNETOPTIONS.html">CURLOPT_TELNETOPTIONS</a> <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0"><span Class="emphasis"><a href="libcurl-errors.html#CURLEOK">CURLE_OK</a></span> (zero) means that the option was set properly, non-zero means an error occurred as <span Class="emphasis">&lt;curl/curl.h&gt;</span> defines. See the <a Class="emphasis" href="libcurl-errors.html">libcurl-errors</a> man page for the full list with descriptions.
+<p class="level0">If you try to set an option that libcurl doesn't know about, perhaps because the library is too old to support it or the option was removed in a recent version, this function will return <span Class="emphasis"><a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a></span>. If support for the option was disabled at compile-time, it will return <span Class="emphasis"><a href="libcurl-errors.html#CURLENOTBUILTIN">CURLE_NOT_BUILT_IN</a></span>. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; CURLcode res;
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+&nbsp; res = curl_easy_perform(curl);
+&nbsp; curl_easy_cleanup(curl);
+}
+</pre>
+<p class="level0"><a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_easy_init.html">curl_easy_init</a>, <a Class="manpage" href="curl_easy_cleanup.html">curl_easy_cleanup</a>, <a Class="manpage" href="curl_easy_reset.html">curl_easy_reset</a>, <a Class="manpage" href="curl_easy_getinfo.html">curl_easy_getinfo</a>, <a Class="manpage" href="curl_multi_setopt.html">curl_multi_setopt</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

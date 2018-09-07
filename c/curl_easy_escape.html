@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_easy_escape()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_easy_escape</b></div>
+<h1> curl_easy_escape - URL encode the given string </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_easy_escape - URL encodes the given string <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0"><span Class="bold">char *curl_easy_escape( CURL * curl , const char * string</span> <span Class="bold">, int length  );</span>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">This function converts the given input <span Class="emphasis">string</span> to a URL encoded string and returns that as a new allocated string. All input characters that are not a-z, A-Z, 0-9, '-', '.', '_' or '~' are converted to their "URL escaped" version (%NN where NN is a two-digit hexadecimal number).
+<p class="level0">If <span Class="emphasis">length</span> is set to 0 (zero), <a Class="emphasis" href="curl_easy_escape.html">curl_easy_escape</a> uses strlen() on the input <span Class="emphasis">string</span> to find out the size.
+<p class="level0">You must <a Class="emphasis" href="curl_free.html">curl_free</a> the returned string when you're done with it. <a name="ENCODING"></a><h2 class="nroffsh">ENCODING</h2>
+<p class="level0">libcurl is typically not aware of, nor does it care about, character encodings. <a Class="emphasis" href="curl_easy_escape.html">curl_easy_escape</a> encodes the data byte-by-byte into the URL encoded version without knowledge or care for what particular character encoding the application or the receiving server may assume that the data uses.
+<p class="level0">The caller of <a Class="emphasis" href="curl_easy_escape.html">curl_easy_escape</a> must make sure that the data passed in to the function is encoded correctly. <a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.15.4 and replaces the old <a Class="emphasis" href="curl_escape.html">curl_escape</a> function. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">A pointer to a zero terminated string or NULL if it failed. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURL *curl = curl_easy_init();
+if(curl) {
+&nbsp; char *output = curl_easy_escape(curl, "data to convert", 15);
+&nbsp; if(output) {
+&nbsp;   printf("Encoded: %s\n", output);
+&nbsp;   curl_free(output);
+&nbsp; }
+}
+</pre>
+<p class="level0"><a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_easy_unescape.html">curl_easy_unescape</a>, <a Class="manpage" href="curl_free.html">curl_free</a>, <span Class="manpage">RFC 3986</span><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

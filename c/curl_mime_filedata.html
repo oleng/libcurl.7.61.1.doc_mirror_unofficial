@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_mime_filedata()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_mime_filedata</b></div>
+<h1> curl_mime_filedata - set a mime part body data from a file </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_mime_filedata - set a mime part's body data from a file contents <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0"><span Class="bold">CURLcode curl_mime_filedata(curl_mimepart *  part ,</span> <span Class="bold"> const char *  filename );</span>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0"><a Class="emphasis" href="curl_mime_filedata.html">curl_mime_filedata</a> sets a mime part's body content from the named file's contents. This is an alternative to <a Class="emphasis" href="curl_mime_data.html">curl_mime_data</a> for setting data to a mime part.
+<p class="level0"><span Class="emphasis">part</span> is the part's to assign contents to.
+<p class="level0"><span Class="emphasis">filename</span> points to the nul-terminated file's path name. The pointer can be NULL to detach the previous part contents settings.  Filename storage can be safely be reused after this call.
+<p class="level0">As a side effect, the part's remote file name is set to the base name of the given <span Class="emphasis">filename</span> if it is a valid named file. This can be undone or overridden by a subsequent call to <a Class="emphasis" href="curl_mime_filename.html">curl_mime_filename</a>.
+<p class="level0">The contents of the file is read during the file transfer in a streaming manner to allow huge files to get transferred without using much memory. It therefore requires that the file is kept intact during the entire request.
+<p class="level0">If the file size cannot be determined before actually reading it (such as for a device or named pipe), the whole mime structure containing the part will be transferred as chunks by HTTP and rejected by IMAP.
+<p class="level0">Setting a part's contents twice is valid: only the value set by the last call is retained. <a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">As long as at least one of HTTP, SMTP or IMAP is enabled. Added in 7.56.0. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0"><a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> or a CURL error code upon failure. <a href="libcurl-errors.html#CURLEREADERROR">CURLE_READ_ERROR</a> is only an indication that the file is not yet readable: it can be safely ignored at this time, but the file must be made readable before the pertaining easy handle is performed. <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+&nbsp;curl_mime *mime;
+&nbsp;curl_mimepart *part;
+&nbsp;
+&nbsp;/* create a mime handle */
+&nbsp;mime = curl_mime_init(easy);
+&nbsp;
+&nbsp;/* add a part */
+&nbsp;part = curl_mime_addpart(mime);
+&nbsp;
+&nbsp;/* send data from this file */
+&nbsp;curl_mime_filedata(part, "image.png");
+&nbsp;
+&nbsp;/* set name */
+&nbsp;curl_mime_name(part, "data");
+</pre>
+<p class="level0"><a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_mime_addpart.html">curl_mime_addpart</a>, <a Class="manpage" href="curl_mime_data.html">curl_mime_data</a>, <a Class="manpage" href="curl_mime_filename.html">curl_mime_filename</a>, <a Class="manpage" href="curl_mime_name.html">curl_mime_name</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl - curl_version_info()</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <b>curl_version_info</b></div>
+<h1> curl_version_info - returns run-time libcurl version info </h1>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">curl_version_info - returns run-time libcurl version info <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><span Class="bold">#include &lt;curl/curl.h&gt;</span>
+<p class="level0"><span Class="bold">curl_version_info_data *curl_version_info( CURLversion age );</span>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Returns a pointer to a filled in static struct with information about various features in the running version of libcurl. <span Class="emphasis">age</span> should be set to the version of this functionality by the time you write your program. This way, libcurl will always return a proper struct that your program understands, while programs in the future might get a different struct. <span Class="bold">CURLVERSION_NOW</span> will be the most recent one for the library you have installed:
+<p class="level0">&nbsp;       data = curl_version_info(CURLVERSION_NOW);
+<p class="level0">Applications should use this information to judge if things are possible to do or not, instead of using compile-time checks, as dynamic/DLL libraries can be changed independent of applications.
+<p class="level0">The curl_version_info_data struct looks like this
+<p class="level0"><pre class="level0">
+typedef struct {
+&nbsp; CURLversion age;          /* see description below */
+&nbsp;
+&nbsp; /* when 'age' is 0 or higher, the members below also exist: */
+&nbsp; const char *version;      /* human readable string */
+&nbsp; unsigned int version_num; /* numeric representation */
+&nbsp; const char *host;         /* human readable string */
+&nbsp; int features;             /* bitmask, see below */
+&nbsp; char *ssl_version;        /* human readable string */
+&nbsp; long ssl_version_num;     /* not used, always zero */
+&nbsp; const char *libz_version; /* human readable string */
+&nbsp; const char * const *protocols; /* protocols */
+&nbsp;
+&nbsp; /* when 'age' is 1 or higher, the members below also exist: */
+&nbsp; const char *ares;         /* human readable string */
+&nbsp; int ares_num;             /* number */
+&nbsp;
+&nbsp; /* when 'age' is 2 or higher, the member below also exists: */
+&nbsp; const char *libidn;       /* human readable string */
+&nbsp;
+&nbsp; /* when 'age' is 3 or higher (7.16.1 or later), the members below also
+&nbsp;    exist  */
+&nbsp; int iconv_ver_num;       /* '_libiconv_version' if iconv support enabled */
+&nbsp;
+&nbsp; const char *libssh_version; /* human readable string */
+&nbsp;
+&nbsp; /* when 'age' is 4 or higher (7.57.0 or later), the members below also
+&nbsp;    exist  */
+&nbsp; unsigned int brotli_ver_num; /* Numeric Brotli version
+&nbsp;                                 (MAJOR &lt;&lt; 24) | (MINOR &lt;&lt; 12) | PATCH */
+&nbsp; const char *brotli_version; /* human readable string. */
+&nbsp;
+} curl_version_info_data;
+</pre>
+<p class="level0">
+<p class="level0"><span Class="emphasis">age</span> describes what the age of this struct is. The number depends on how new the libcurl you're using is. You are however guaranteed to get a struct that you have a matching struct for in the header, as you tell libcurl your "age" with the input argument.
+<p class="level0"><span Class="emphasis">version</span> is just an ascii string for the libcurl version.
+<p class="level0"><span Class="emphasis">version_num</span> is a 24 bit number created like this: &lt;8 bits major number&gt; | &lt;8 bits minor number&gt; | &lt;8 bits patch number&gt;. Version 7.9.8 is therefore returned as 0x070908.
+<p class="level0"><span Class="emphasis">host</span> is an ascii string showing what host information that this libcurl was built for. As discovered by a configure script or set by the build environment.
+<p class="level0"><span Class="emphasis">features</span> can have none, one or more bits set, and the currently defined bits are:
+<p class="level1">
+<p class="level0"><a name="CURLVERSIONIPV6"></a><span class="nroffip">CURL_VERSION_IPV6</span>
+<p class="level1">supports IPv6
+<p class="level0"><a name="CURLVERSIONKERBEROS4"></a><span class="nroffip">CURL_VERSION_KERBEROS4</span>
+<p class="level1">supports Kerberos V4 (when using FTP)
+<p class="level0"><a name="CURLVERSIONKERBEROS5"></a><span class="nroffip">CURL_VERSION_KERBEROS5</span>
+<p class="level1">supports Kerberos V5 authentication for FTP, IMAP, POP3, SMTP and SOCKSv5 proxy (Added in 7.40.0)
+<p class="level0"><a name="CURLVERSIONSSL"></a><span class="nroffip">CURL_VERSION_SSL</span>
+<p class="level1">supports SSL (HTTPS/FTPS) (Added in 7.10)
+<p class="level0"><a name="CURLVERSIONLIBZ"></a><span class="nroffip">CURL_VERSION_LIBZ</span>
+<p class="level1">supports HTTP deflate using libz (Added in 7.10)
+<p class="level0"><a name="CURLVERSIONNTLM"></a><span class="nroffip">CURL_VERSION_NTLM</span>
+<p class="level1">supports HTTP NTLM (added in 7.10.6)
+<p class="level0"><a name="CURLVERSIONGSSNEGOTIATE"></a><span class="nroffip">CURL_VERSION_GSSNEGOTIATE</span>
+<p class="level1">supports HTTP GSS-Negotiate (added in 7.10.6)
+<p class="level0"><a name="CURLVERSIONDEBUG"></a><span class="nroffip">CURL_VERSION_DEBUG</span>
+<p class="level1">libcurl was built with debug capabilities (added in 7.10.6)
+<p class="level0"><a name="CURLVERSIONCURLDEBUG"></a><span class="nroffip">CURL_VERSION_CURLDEBUG</span>
+<p class="level1">libcurl was built with memory tracking debug capabilities. This is mainly of interest for libcurl hackers. (added in 7.19.6)
+<p class="level0"><a name="CURLVERSIONASYNCHDNS"></a><span class="nroffip">CURL_VERSION_ASYNCHDNS</span>
+<p class="level1">libcurl was built with support for asynchronous name lookups, which allows more exact timeouts (even on Windows) and less blocking when using the multi interface. (added in 7.10.7)
+<p class="level0"><a name="CURLVERSIONSPNEGO"></a><span class="nroffip">CURL_VERSION_SPNEGO</span>
+<p class="level1">libcurl was built with support for SPNEGO authentication (Simple and Protected GSS-API Negotiation Mechanism, defined in <a href="http://www.ietf.org/rfc/rfc2478.txt">RFC 2478</a>.) (added in 7.10.8)
+<p class="level0"><a name="CURLVERSIONLARGEFILE"></a><span class="nroffip">CURL_VERSION_LARGEFILE</span>
+<p class="level1">libcurl was built with support for large files. (Added in 7.11.1)
+<p class="level0"><a name="CURLVERSIONIDN"></a><span class="nroffip">CURL_VERSION_IDN</span>
+<p class="level1">libcurl was built with support for IDNA, domain names with international letters. (Added in 7.12.0)
+<p class="level0"><a name="CURLVERSIONSSPI"></a><span class="nroffip">CURL_VERSION_SSPI</span>
+<p class="level1">libcurl was built with support for SSPI. This is only available on Windows and makes libcurl use Windows-provided functions for Kerberos, NTLM, SPNEGO and Digest authentication. It also allows libcurl to use the current user credentials without the app having to pass them on. (Added in 7.13.2)
+<p class="level0"><a name="CURLVERSIONGSSAPI"></a><span class="nroffip">CURL_VERSION_GSSAPI</span>
+<p class="level1">libcurl was built with support for GSS-API. This makes libcurl use provided functions for Kerberos and SPNEGO authentication. It also allows libcurl to use the current user credentials without the app having to pass them on. (Added in 7.38.0)
+<p class="level0"><a name="CURLVERSIONCONV"></a><span class="nroffip">CURL_VERSION_CONV</span>
+<p class="level1">libcurl was built with support for character conversions, as provided by the CURLOPT_CONV_* callbacks. (Added in 7.15.4)
+<p class="level0"><a name="CURLVERSIONTLSAUTHSRP"></a><span class="nroffip">CURL_VERSION_TLSAUTH_SRP</span>
+<p class="level1">libcurl was built with support for TLS-SRP. (Added in 7.21.4)
+<p class="level0"><a name="CURLVERSIONNTLMWB"></a><span class="nroffip">CURL_VERSION_NTLM_WB</span>
+<p class="level1">libcurl was built with support for NTLM delegation to a winbind helper. (Added in 7.22.0)
+<p class="level0"><a name="CURLVERSIONHTTP2"></a><span class="nroffip">CURL_VERSION_HTTP2</span>
+<p class="level1">libcurl was built with support for HTTP2. (Added in 7.33.0)
+<p class="level0"><a name="CURLVERSIONUNIXSOCKETS"></a><span class="nroffip">CURL_VERSION_UNIX_SOCKETS</span>
+<p class="level1">libcurl was built with support for Unix domain sockets. (Added in 7.40.0)
+<p class="level0"><a name="CURLVERSIONPSL"></a><span class="nroffip">CURL_VERSION_PSL</span>
+<p class="level1">libcurl was built with support for Mozilla's Public Suffix List. This makes libcurl ignore cookies with a domain that's on the list. (Added in 7.47.0)
+<p class="level0"><a name="CURLVERSIONHTTPSPROXY"></a><span class="nroffip">CURL_VERSION_HTTPS_PROXY</span>
+<p class="level1">libcurl was built with support for HTTPS-proxy. (Added in 7.52.0)
+<p class="level0"><a name="CURLVERSIONMULTISSL"></a><span class="nroffip">CURL_VERSION_MULTI_SSL</span>
+<p class="level1">libcurl was built with multiple SSL backends. For details, see <a Class="emphasis" href="curl_global_sslset.html">curl_global_sslset</a>. (Added in 7.56.0)
+<p class="level0"><a name="CURLVERSIONBROTLI"></a><span class="nroffip">CURL_VERSION_BROTLI</span>
+<p class="level1">supports HTTP Brotli content encoding using libbrotlidec (Added in 7.57.0)
+<p class="level0"><span Class="emphasis">ssl_version</span> is an ASCII string for the TLS library name + version used. If libcurl has no SSL support, this is NULL. For example "WinSSL", "SecureTransport" or "OpenSSL/1.1.0g".
+<p class="level0"><span Class="emphasis">ssl_version_num</span> is always 0.
+<p class="level0"><span Class="emphasis">libz_version</span> is an ASCII string (there is no numerical version). If libcurl has no libz support, this is NULL.
+<p class="level0"><span Class="emphasis">protocols</span> is a pointer to an array of char * pointers, containing the names protocols that libcurl supports (using lowercase letters). The protocol names are the same as would be used in URLs. The array is terminated by a NULL entry. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">A pointer to a curl_version_info_data struct. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="emphasis" href="curl_version.html">curl_version</a>
+<p class="level0"><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

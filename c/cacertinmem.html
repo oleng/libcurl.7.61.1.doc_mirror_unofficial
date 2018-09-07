@@ -1,0 +1,221 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - cacertinmem.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>cacertinmem.c</b></div>
+<h1> cacertinmem.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/cacertinmem.c">Download cacertinmem.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * CA cert in memory with OpenSSL to get a HTTPS page.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/err.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;openssl/ssl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">writefunction</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *ptr, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *stream)
+{
+  fwrite(ptr, size, nmemb, (FILE *)stream);
+  <B><FONT COLOR="#A020F0">return</FONT></B> (nmemb*size);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> CURLcode <B><FONT COLOR="#0000FF">sslctx_function</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">void</FONT></B> *sslctx, <B><FONT COLOR="#228B22">void</FONT></B> *parm)
+{
+  CURLcode rv = CURLE_ABORTED_BY_CALLBACK;
+  X509_STORE *store = NULL;
+  X509 *cert = NULL;
+  BIO *bio = NULL;
+  <B><FONT COLOR="#228B22">char</FONT></B> *mypem =
+    <I><FONT COLOR="#B22222">/* CA for example.com. CN = DigiCert High Assurance EV Root CA */ </FONT></I>
+    <B><FONT COLOR="#BC8F8F">&quot;-----BEGIN CERTIFICATE-----\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;+9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;+OkuE6N36B9K\n&quot;</FONT></B>
+    <B><FONT COLOR="#BC8F8F">&quot;-----END CERTIFICATE-----\n&quot;</FONT></B>;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* clear the current thread's OpenSSL error queue */ </FONT></I>
+  ERR_clear_error();
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get a BIO */ </FONT></I>
+  bio = BIO_new_mem_buf(mypem, -1);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!bio)
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* use it to read the PEM formatted certificate from memory into an X509
+   * structure that SSL can use
+   */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!PEM_read_bio_X509(bio, &amp;cert, 0, NULL))
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get a pointer to the X509 certificate store (which may be empty!) */ </FONT></I>
+  store = SSL_CTX_get_cert_store((SSL_CTX *)sslctx);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!store)
+    <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* add our certificate to this store */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!X509_STORE_add_cert(store, cert)) {
+    <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> error = ERR_peek_last_error();
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Ignore error X509_R_CERT_ALREADY_IN_HASH_TABLE which means the
+     * certificate is already in the store. That could happen if
+     * libcurl already loaded the certificate from a ca cert bundle
+     * set at libcurl build-time or runtime.
+     */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(ERR_GET_LIB(error) != ERR_LIB_X509 ||
+       ERR_GET_REASON(error) != X509_R_CERT_ALREADY_IN_HASH_TABLE)
+      <B><FONT COLOR="#A020F0">goto</FONT></B> <B><FONT COLOR="#5F9EA0">err</FONT></B>;
+&nbsp;
+    ERR_clear_error();
+  }
+&nbsp;
+  rv = CURLE_OK;
+&nbsp;
+<B><FONT COLOR="#5F9EA0">err</FONT></B>:
+  <B><FONT COLOR="#A020F0">if</FONT></B>(rv != CURLE_OK) {
+    <B><FONT COLOR="#228B22">char</FONT></B> errbuf[256];
+    <B><FONT COLOR="#228B22">unsigned</FONT></B> <B><FONT COLOR="#228B22">long</FONT></B> error = ERR_peek_last_error();
+&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;error adding certificate\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(error) {
+      ERR_error_string_n(error, errbuf, <B><FONT COLOR="#A020F0">sizeof</FONT></B>(errbuf));
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;%s\n&quot;</FONT></B>, errbuf);
+    }
+  }
+&nbsp;
+  X509_free(cert);
+  BIO_free(bio);
+  ERR_clear_error();
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> rv;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *ch;
+  CURLcode rv;
+&nbsp;
+  rv = <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+  ch = <a href="curl_easy_init.html">curl_easy_init</a>();
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 0L);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_HEADER.html">CURLOPT_HEADER</a>, 0L);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1L);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_NOSIGNAL.html">CURLOPT_NOSIGNAL</a>, 1L);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, *writefunction);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, stdout);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_HEADERFUNCTION.html">CURLOPT_HEADERFUNCTION</a>, *writefunction);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_HEADERDATA.html">CURLOPT_HEADERDATA</a>, stderr);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_SSLCERTTYPE.html">CURLOPT_SSLCERTTYPE</a>, <B><FONT COLOR="#BC8F8F">&quot;PEM&quot;</FONT></B>);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_SSL_VERIFYPEER.html">CURLOPT_SSL_VERIFYPEER</a>, 1L);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;https://www.example.com/&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* turn off the default CA locations (optional)
+   * otherwise libcurl will load CA certificates from the locations that
+   * were detected/specified at build-time
+   */ </FONT></I>
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_CAINFO.html">CURLOPT_CAINFO</a>, NULL);
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_CAPATH.html">CURLOPT_CAPATH</a>, NULL);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* first try: retrieve page without ca certificates -&gt; should fail
+   * unless libcurl was built --with-ca-fallback enabled at build-time
+   */ </FONT></I>
+  rv = <a href="curl_easy_perform.html">curl_easy_perform</a>(ch);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(rv == CURLE_OK)
+    printf(<B><FONT COLOR="#BC8F8F">&quot;*** transfer succeeded ***\n&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    printf(<B><FONT COLOR="#BC8F8F">&quot;*** transfer failed ***\n&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* use a fresh connection (optional)
+   * this option seriously impacts performance of multiple transfers but
+   * it is necessary order to demonstrate this example. recall that the
+   * ssl ctx callback is only called _before_ an SSL connection is
+   * established, therefore it will not affect existing verified SSL
+   * connections already in the connection cache associated with this
+   * handle. normally you would set the ssl ctx function before making
+   * any transfers, and not use this option.
+   */ </FONT></I>
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_FRESH_CONNECT.html">CURLOPT_FRESH_CONNECT</a>, 1L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* second try: retrieve page using cacerts' certificate -&gt; will succeed
+   * load the certificate by installing a function doing the necessary
+   * &quot;modifications&quot; to the SSL CONTEXT just before link init
+   */ </FONT></I>
+  rv = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(ch, <a href="CURLOPT_SSL_CTX_FUNCTION.html">CURLOPT_SSL_CTX_FUNCTION</a>, *sslctx_function);
+  rv = <a href="curl_easy_perform.html">curl_easy_perform</a>(ch);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(rv == CURLE_OK)
+    printf(<B><FONT COLOR="#BC8F8F">&quot;*** transfer succeeded ***\n&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">else</FONT></B>
+    printf(<B><FONT COLOR="#BC8F8F">&quot;*** transfer failed ***\n&quot;</FONT></B>);
+&nbsp;
+  <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(ch);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> rv;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

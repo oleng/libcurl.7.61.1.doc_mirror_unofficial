@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - crawler.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>crawler.c</b></div>
+<h1> crawler.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/crawler.c">Download crawler.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Web crawler based on curl and libxml2.
+ * Copyright (C) 2018 Jeroen Ooms &lt;jeroenooms@gmail.com&gt;
+ * License: MIT
+ *
+ * To compile:
+ *   gcc crawler.c $(pkg-config --cflags --libs libxml-2.0 libcurl)
+ *
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Web crawler based on curl and libxml2 to stress-test curl with
+ * hundreds of concurrent connections to various servers.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* Parameters */ </FONT></I>
+<B><FONT COLOR="#228B22">int</FONT></B> max_con = 200;
+<B><FONT COLOR="#228B22">int</FONT></B> max_total = 20000;
+<B><FONT COLOR="#228B22">int</FONT></B> max_requests = 500;
+<B><FONT COLOR="#228B22">int</FONT></B> max_link_per_page = 5;
+<B><FONT COLOR="#228B22">int</FONT></B> follow_relative_links = 0;
+<B><FONT COLOR="#228B22">char</FONT></B> *start_page = <B><FONT COLOR="#BC8F8F">&quot;https://www.reuters.com&quot;</FONT></B>;
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;libxml/HTMLparser.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;libxml/xpath.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;libxml/uri.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;math.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;signal.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> pending_interrupt = 0;
+<B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">sighandler</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> dummy)
+{
+  pending_interrupt = 1;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* resizable buffer */ </FONT></I>
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> {
+  <B><FONT COLOR="#228B22">char</FONT></B> *buf;
+  size_t size;
+} memory;
+&nbsp;
+size_t <B><FONT COLOR="#0000FF">grow_buffer</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *contents, size_t sz, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *ctx)
+{
+  size_t realsize = sz * nmemb;
+  memory *mem = (memory*) ctx;
+  mem-&gt;buf = realloc(mem-&gt;buf, mem-&gt;size + realsize);
+  memcpy(&amp;(mem-&gt;buf[mem-&gt;size]), contents, realsize);
+  mem-&gt;size += realsize;
+  <B><FONT COLOR="#A020F0">return</FONT></B> realsize;
+}
+&nbsp;
+CURL *<B><FONT COLOR="#0000FF">make_handle</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *url)
+{
+  CURL *handle = <a href="curl_easy_init.html">curl_easy_init</a>();
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Important: use HTTP2 over HTTPS */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_HTTP_VERSION.html">CURLOPT_HTTP_VERSION</a>, CURL_HTTP_VERSION_2TLS);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* buffer body */ </FONT></I>
+  memory *mem = malloc(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(memory));
+  mem-&gt;size = 0;
+  mem-&gt;buf = malloc(1);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WRITEFUNCTION.html">CURLOPT_WRITEFUNCTION</a>, grow_buffer);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, mem);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a>, mem);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* For completeness */ </FONT></I>
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="https://curl.haxx.se/libcurl/c/CURLOPT_ENCODING.html">CURLOPT_ENCODING</a>, <B><FONT COLOR="#BC8F8F">&quot;gzip, deflate&quot;</FONT></B>);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_TIMEOUT.html">CURLOPT_TIMEOUT</a>, 5L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_FOLLOWLOCATION.html">CURLOPT_FOLLOWLOCATION</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_MAXREDIRS.html">CURLOPT_MAXREDIRS</a>, 10L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_CONNECTTIMEOUT.html">CURLOPT_CONNECTTIMEOUT</a>, 2L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_COOKIEFILE.html">CURLOPT_COOKIEFILE</a>, <B><FONT COLOR="#BC8F8F">&quot;&quot;</FONT></B>);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_FILETIME.html">CURLOPT_FILETIME</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_USERAGENT.html">CURLOPT_USERAGENT</a>, <B><FONT COLOR="#BC8F8F">&quot;mini crawler&quot;</FONT></B>);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_HTTPAUTH.html">CURLOPT_HTTPAUTH</a>, CURLAUTH_ANY);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_UNRESTRICTED_AUTH.html">CURLOPT_UNRESTRICTED_AUTH</a>, 1L);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_PROXYAUTH.html">CURLOPT_PROXYAUTH</a>, CURLAUTH_ANY);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="https://curl.haxx.se/libcurl/c/CURLOPT_EXPECT_.html">CURLOPT_EXPECT_</a>100_TIMEOUT_MS, 0L);
+  <B><FONT COLOR="#A020F0">return</FONT></B> handle;
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* HREF finder implemented in libxml2 but could be any HTML parser */ </FONT></I>
+size_t <B><FONT COLOR="#0000FF">follow_links</FONT></B>(CURLM *multi_handle, memory *mem, <B><FONT COLOR="#228B22">char</FONT></B> *url)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> opts = HTML_PARSE_NOBLANKS | HTML_PARSE_NOERROR | \&nbsp;
+             HTML_PARSE_NOWARNING | HTML_PARSE_NONET;
+  htmlDocPtr doc = htmlReadMemory(mem-&gt;buf, mem-&gt;size, url, NULL, opts);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!doc)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  xmlChar *xpath = (xmlChar*) <B><FONT COLOR="#BC8F8F">&quot;//a/@href&quot;</FONT></B>;
+  xmlXPathContextPtr context = xmlXPathNewContext(doc);
+  xmlXPathObjectPtr result = xmlXPathEvalExpression(xpath, context);
+  xmlXPathFreeContext(context);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!result)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  xmlNodeSetPtr nodeset = result-&gt;nodesetval;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(xmlXPathNodeSetIsEmpty(nodeset)) {
+    xmlXPathFreeObject(result);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+  }
+  size_t count = 0;
+  <B><FONT COLOR="#A020F0">for</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> i = 0; i &lt; nodeset-&gt;nodeNr; i++) {
+    <B><FONT COLOR="#228B22">double</FONT></B> r = rand();
+    <B><FONT COLOR="#228B22">int</FONT></B> x = r * nodeset-&gt;nodeNr / RAND_MAX;
+    <B><FONT COLOR="#228B22">const</FONT></B> xmlNode *node = nodeset-&gt;nodeTab[x]-&gt;xmlChildrenNode;
+    xmlChar *href = xmlNodeListGetString(doc, node, 1);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(follow_relative_links) {
+      xmlChar *orig = href;
+      href = xmlBuildURI(href, (xmlChar *) url);
+      xmlFree(orig);
+    }
+    <B><FONT COLOR="#228B22">char</FONT></B> *link = (<B><FONT COLOR="#228B22">char</FONT></B> *) href;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!link || strlen(link) &lt; 20)
+      <B><FONT COLOR="#A020F0">continue</FONT></B>;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(!strncmp(link, <B><FONT COLOR="#BC8F8F">&quot;http://&quot;</FONT></B>, 7) || !strncmp(link, <B><FONT COLOR="#BC8F8F">&quot;https://&quot;</FONT></B>, 8)) {
+      <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, make_handle(link));
+      <B><FONT COLOR="#A020F0">if</FONT></B>(count++ == max_link_per_page)
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+    xmlFree(link);
+  }
+  xmlXPathFreeObject(result);
+  <B><FONT COLOR="#A020F0">return</FONT></B> count;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">is_html</FONT></B>(<B><FONT COLOR="#228B22">char</FONT></B> *ctype)
+{
+  <B><FONT COLOR="#A020F0">return</FONT></B> ctype != NULL &amp;&amp; strlen(ctype) &gt; 10 &amp;&amp; strstr(ctype, <B><FONT COLOR="#BC8F8F">&quot;text/html&quot;</FONT></B>);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  signal(SIGINT, sighandler);
+  LIBXML_TEST_VERSION;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+  CURLM *multi_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_MAX_TOTAL_CONNECTIONS.html">CURLMOPT_MAX_TOTAL_CONNECTIONS</a>, max_con);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_MAX_HOST_CONNECTIONS.html">CURLMOPT_MAX_HOST_CONNECTIONS</a>, 6L);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* enables http/2 if available */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">CURLPIPE_MULTIPLEX</FONT>
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(multi_handle, <a href="CURLMOPT_PIPELINING.html">CURLMOPT_PIPELINING</a>, CURLPIPE_MULTIPLEX);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+  <I><FONT COLOR="#B22222">/* sets html start page */ </FONT></I>
+  <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, make_handle(start_page));
+&nbsp;
+  <B><FONT COLOR="#228B22">int</FONT></B> msgs_left;
+  <B><FONT COLOR="#228B22">int</FONT></B> pending = 0;
+  <B><FONT COLOR="#228B22">int</FONT></B> complete = 0;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running = 1;
+  <B><FONT COLOR="#A020F0">while</FONT></B>(still_running &amp;&amp; !pending_interrupt) {
+    <B><FONT COLOR="#228B22">int</FONT></B> numfds;
+    <a href="curl_multi_wait.html">curl_multi_wait</a>(multi_handle, NULL, 0, 1000, &amp;numfds);
+    <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* See how the transfers went */ </FONT></I>
+    CURLMsg *m = NULL;
+    <B><FONT COLOR="#A020F0">while</FONT></B>((m = <a href="curl_multi_info_read.html">curl_multi_info_read</a>(multi_handle, &amp;msgs_left))) {
+      <B><FONT COLOR="#A020F0">if</FONT></B>(m-&gt;msg == CURLMSG_DONE) {
+        CURL *handle = m-&gt;easy_handle;
+        <B><FONT COLOR="#228B22">char</FONT></B> *url;
+        memory *mem;
+        <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(handle, <a href="CURLINFO_PRIVATE.html">CURLINFO_PRIVATE</a>, &amp;mem);
+        <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(handle, <a href="CURLINFO_EFFECTIVE_URL.html">CURLINFO_EFFECTIVE_URL</a>, &amp;url);
+        <B><FONT COLOR="#A020F0">if</FONT></B>(m-&gt;data.result == CURLE_OK) {
+          <B><FONT COLOR="#228B22">long</FONT></B> res_status;
+          <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(handle, <a href="CURLINFO_RESPONSE_CODE.html">CURLINFO_RESPONSE_CODE</a>, &amp;res_status);
+          <B><FONT COLOR="#A020F0">if</FONT></B>(res_status == 200) {
+            <B><FONT COLOR="#228B22">char</FONT></B> *ctype;
+            <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(handle, <a href="CURLINFO_CONTENT_TYPE.html">CURLINFO_CONTENT_TYPE</a>, &amp;ctype);
+            printf(<B><FONT COLOR="#BC8F8F">&quot;[%d] HTTP 200 (%s): %s\n&quot;</FONT></B>, complete, ctype, url);
+            <B><FONT COLOR="#A020F0">if</FONT></B>(is_html(ctype) &amp;&amp; mem-&gt;size &gt; 100) {
+              <B><FONT COLOR="#A020F0">if</FONT></B>(pending &lt; max_requests &amp;&amp; (complete + pending) &lt; max_total) {
+                pending += follow_links(multi_handle, mem, url);
+                still_running = 1;
+              }
+            }
+          }
+          <B><FONT COLOR="#A020F0">else</FONT></B> {
+            printf(<B><FONT COLOR="#BC8F8F">&quot;[%d] HTTP %d: %s\n&quot;</FONT></B>, complete, (<B><FONT COLOR="#228B22">int</FONT></B>) res_status, url);
+          }
+        }
+        <B><FONT COLOR="#A020F0">else</FONT></B> {
+          printf(<B><FONT COLOR="#BC8F8F">&quot;[%d] Connection failure: %s\n&quot;</FONT></B>, complete, url);
+        }
+        <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(multi_handle, handle);
+        <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(handle);
+        free(mem-&gt;buf);
+        free(mem);
+        complete++;
+        pending--;
+      }
+    }
+  }
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(multi_handle);
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>
