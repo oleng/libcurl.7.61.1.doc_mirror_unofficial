@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_CHUNK_BGN_FUNCTION</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_CHUNK_BGN_FUNCTION</b></div>
+<h1> CURLOPT_CHUNK_BGN_FUNCTION explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_CHUNK_BGN_FUNCTION - callback before a transfer with FTP wildcardmatch <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+long chunk_bgn_callback(const void *transfer_info, void *ptr,
+&nbsp;                       int remains);
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_CHUNK_BGN_FUNCTION,
+&nbsp;                         chunk_bgn_callback);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to your callback function, which should match the prototype shown above.
+<p class="level0">This callback function gets called by libcurl before a part of the stream is going to be transferred (if the transfer supports chunks).
+<p class="level0">The <span Class="emphasis">transfer_info</span> pointer will point to a struct curl_fileinfo with details about the file that is about to get transferred.
+<p class="level0">This callback makes sense only when using the <a Class="emphasis" href="CURLOPT_WILDCARDMATCH.html">CURLOPT_WILDCARDMATCH</a> option for now.
+<p class="level0">The target of transfer_info parameter is a "feature depended" structure. For the FTP wildcard download, the target is curl_fileinfo structure (see <span Class="emphasis">curl/curl.h</span>).  The parameter <span Class="emphasis">ptr</span> is a pointer given by <a Class="emphasis" href="CURLOPT_CHUNK_DATA.html">CURLOPT_CHUNK_DATA</a>. The parameter remains contains number of chunks remaining per the transfer. If the feature is not available, the parameter has zero value.
+<p class="level0">Return <span Class="emphasis">CURL_CHUNK_BGN_FUNC_OK</span> if everything is fine, <span Class="emphasis">CURL_CHUNK_BGN_FUNC_SKIP</span> if you want to skip the concrete chunk or <span Class="emphasis">CURL_CHUNK_BGN_FUNC_FAIL</span> to tell libcurl to stop if some error occurred. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">FTP <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+static long file_is_coming(struct curl_fileinfo *finfo,
+&nbsp;                          struct callback_data *data,
+&nbsp;                          int remains)
+{
+&nbsp; printf("%3d %40s %10luB ", remains, finfo-&gt;filename,
+&nbsp;        (unsigned long)finfo-&gt;size);
+&nbsp;
+&nbsp; switch(finfo-&gt;filetype) {
+&nbsp; case CURLFILETYPE_DIRECTORY:
+&nbsp;   printf(" DIRn");
+&nbsp;   break;
+&nbsp; case CURLFILETYPE_FILE:
+&nbsp;   printf("FILE ");
+&nbsp;   break;
+&nbsp; default:
+&nbsp;   printf("OTHERn");
+&nbsp;   break;
+&nbsp; }
+&nbsp;
+&nbsp; if(finfo-&gt;filetype == CURLFILETYPE_FILE) {
+&nbsp;   /* do not transfer files &gt;= 50B */
+&nbsp;   if(finfo-&gt;size &gt; 50) {
+&nbsp;     printf("SKIPPEDn");
+&nbsp;     return CURL_CHUNK_BGN_FUNC_SKIP;
+&nbsp;   }
+&nbsp;
+&nbsp;   data-&gt;output = fopen(finfo-&gt;filename, "wb");
+&nbsp;   if(!data-&gt;output) {
+&nbsp;     return CURL_CHUNK_BGN_FUNC_FAIL;
+&nbsp;   }
+&nbsp; }
+&nbsp;
+&nbsp; return CURL_CHUNK_BGN_FUNC_OK;
+}
+&nbsp;
+int main()
+{
+&nbsp; /* data for callback */
+&nbsp; struct callback_data callback_info;
+&nbsp;
+&nbsp; /* callback is called before download of concrete file started */
+&nbsp; curl_easy_setopt(curl, CURLOPT_CHUNK_BGN_FUNCTION, file_is_coming);
+&nbsp; curl_easy_setopt(curl, CURLOPT_CHUNK_DATA, &callback_info);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">This was added in 7.21.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_CHUNK_END_FUNCTION.html">CURLOPT_CHUNK_END_FUNCTION</a>, <a Class="manpage" href="CURLOPT_WILDCARDMATCH.html">CURLOPT_WILDCARDMATCH</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

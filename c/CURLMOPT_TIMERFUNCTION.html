@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLMOPT_TIMERFUNCTION</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_multi_setopt.html">curl_multi_setopt</a> / <b>CURLMOPT_TIMERFUNCTION</b></div>
+<h1> CURLMOPT_TIMERFUNCTION explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLMOPT_TIMERFUNCTION - set callback to receive timeout values <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+int timer_callback(CURLM *multi,    /* multi handle */
+&nbsp;                  long timeout_ms, /* see above */
+&nbsp;                  void *userp);    /* private callback pointer */
+&nbsp;
+CURLMcode curl_multi_setopt(CURLM *handle, CURLMOPT_TIMERFUNCTION, timer_callback);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to your callback function, which should match the prototype shown above.
+<p class="level0">Certain features, such as timeouts and retries, require you to call libcurl even when there is no activity on the file descriptors.
+<p class="level0">Your callback function <span Class="bold">timer_callback</span> should install a non-repeating timer with an interval of <span Class="bold">timeout_ms</span>. Each time that timer fires, call either <a Class="emphasis" href="curl_multi_socket_action.html">curl_multi_socket_action</a> or <a Class="emphasis" href="curl_multi_perform.html">curl_multi_perform</a>, depending on which interface you use.
+<p class="level0">A <span Class="bold">timeout_ms</span> value of -1 means you should delete your timer.
+<p class="level0">A <span Class="bold">timeout_ms</span> value of 0 means you should call <a Class="emphasis" href="curl_multi_socket_action.html">curl_multi_socket_action</a> or <a Class="emphasis" href="curl_multi_perform.html">curl_multi_perform</a> (once) as soon as possible.
+<p class="level0"><span Class="bold">timer_callback</span> will only be called when the <span Class="bold">timeout_ms</span> changes.
+<p class="level0">The <span Class="bold">userp</span> pointer is set with <a Class="emphasis" href="CURLMOPT_TIMERDATA.html">CURLMOPT_TIMERDATA</a>.
+<p class="level0">The timer callback should return 0 on success, and -1 on error. This callback can be used instead of, or in addition to, <a Class="emphasis" href="curl_multi_timeout.html">curl_multi_timeout</a>. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+static gboolean timeout_cb(gpointer user_data)
+{
+&nbsp; int running;
+&nbsp; if(user_data) {
+&nbsp;   g_free(user_data);
+&nbsp;   curl_multi_setopt(curl_handle, CURLMOPT_TIMERDATA, NULL);
+&nbsp; }
+&nbsp; curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &running);
+&nbsp; return G_SOURCE_REMOVE;
+}
+&nbsp;
+static int timerfunc(CURLM *multi, long timeout_ms, void *userp)
+{
+&nbsp; guint *id = userp;
+&nbsp;
+&nbsp; if(id)
+&nbsp;   g_source_remove(*id);
+&nbsp;
+&nbsp; /* -1 means we should just delete our timer. */
+&nbsp; if(timeout_ms == -1) {
+&nbsp;   g_free(id);
+&nbsp;   id = NULL;
+&nbsp; }
+&nbsp; else {
+&nbsp;   if(!id)
+&nbsp;     id = g_new(guint, 1);
+&nbsp;   *id = g_timeout_add(timeout_ms, timeout_cb, id);
+&nbsp; }
+&nbsp; curl_multi_setopt(multi, CURLMOPT_TIMERDATA, id);
+&nbsp; return 0;
+}
+&nbsp;
+curl_multi_setopt(multi, CURLMOPT_TIMERFUNCTION, timerfunc);
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.16.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLMOK">CURLM_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLMUNKNOWNOPTION">CURLM_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLMOPT_TIMERDATA.html">CURLMOPT_TIMERDATA</a>, <a Class="manpage" href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

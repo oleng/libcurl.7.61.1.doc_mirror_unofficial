@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLINFO_TOTAL_TIME_T</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_getinfo.html">curl_easy_getinfo</a> / <b>CURLINFO_TOTAL_TIME_T</b></div>
+<h1> CURLINFO_TOTAL_TIME_T explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_getinfo_options.html">info options</a>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLINFO_TOTAL_TIME_T - get total time of previous transfer in microseconds <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLcode curl_easy_getinfo(CURL *handle, CURLINFO_TOTAL_TIME_T, curl_off_t *timep); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to a curl_off_t to receive the total time in microseconds for the previous transfer, including name resolving, TCP connect etc. The curl_off_t represents the time in microseconds.
+<p class="level0">See also the TIMES overview in the <a Class="emphasis" href="curl_easy_getinfo.html">curl_easy_getinfo</a> man page. <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">All <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+curl = curl_easy_init();
+if(curl) {
+&nbsp; curl_off_t total;
+&nbsp; curl_easy_setopt(curl, CURLOPT_URL, url);
+&nbsp; res = curl_easy_perform(curl);
+&nbsp; if(<a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> == res) {
+&nbsp;   res = curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &total);
+&nbsp;   if(<a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> == res) {
+&nbsp;     printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld", total / 1000000,
+&nbsp;            (long)(total % 1000000));
+&nbsp;   }
+&nbsp; }
+&nbsp; /* always cleanup */
+&nbsp; curl_easy_cleanup(curl);
+}
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.61.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="curl_easy_getinfo.html">curl_easy_getinfo</a>, <a Class="manpage" href="curl_easy_setopt.html">curl_easy_setopt</a>, <a Class="manpage" href="CURLINFO_TOTAL_TIME.html">CURLINFO_TOTAL_TIME</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

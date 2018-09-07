@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLOPT_CONV_TO_NETWORK_FUNCTION</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_easy_setopt.html">curl_easy_setopt</a> / <b>CURLOPT_CONV_TO_NETWORK_FUNCTION</b></div>
+<h1> CURLOPT_CONV_TO_NETWORK_FUNCTION explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="easy_getinfo_options.html">getinfo options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLOPT_CONV_TO_NETWORK_FUNCTION - convert data to network from host encoding <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+CURLcode conv_callback(char *ptr, size_t length);
+&nbsp;
+CURLcode curl_easy_setopt(CURL *handle, CURLOPT_CONV_TO_NETWORK_FUNCTION,
+&nbsp;                         conv_callback);
+</pre>
+<a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass a pointer to your callback function, which should match the prototype shown above.
+<p class="level0">Applies to non-ASCII platforms. <a Class="emphasis" href="curl_version_info.html">curl_version_info</a> will return the CURL_VERSION_CONV feature bit set if this option is provided.
+<p class="level0">The data to be converted is in a buffer pointed to by the <span Class="emphasis">ptr</span> parameter. The amount of data to convert is indicated by the <span Class="emphasis">length</span> parameter.  The converted data overlays the input data in the buffer pointed to by the ptr parameter. <span Class="emphasis"><a href="libcurl-errors.html#CURLEOK">CURLE_OK</a></span> must be returned upon successful conversion.  A CURLcode return value defined by curl.h, such as <span Class="emphasis"><a href="libcurl-errors.html#CURLECONVFAILED">CURLE_CONV_FAILED</a></span>, should be returned if an error was encountered.
+<p class="level0"><span Class="bold">CURLOPT_CONV_TO_NETWORK_FUNCTION</span> converts from host encoding to the network encoding.  It is used when commands or ASCII data are sent over the network.
+<p class="level0">If you set a callback pointer to NULL, or don't set it at all, the built-in libcurl iconv functions will be used.  If HAVE_ICONV was not defined when libcurl was built, and no callback has been established, conversion will return the <a href="libcurl-errors.html#CURLECONVREQD">CURLE_CONV_REQD</a> error code.
+<p class="level0">If HAVE_ICONV is defined, CURL_ICONV_CODESET_OF_HOST must also be defined. For example:
+<p class="level0">&nbsp;&#35;define CURL_ICONV_CODESET_OF_HOST "IBM-1047"
+<p class="level0">The iconv code in libcurl will default the network and UTF8 codeset names as follows:
+<p class="level0">&nbsp;&#35;define CURL_ICONV_CODESET_OF_NETWORK "ISO8859-1"
+<p class="level0">&nbsp;&#35;define CURL_ICONV_CODESET_FOR_UTF8   "UTF-8"
+<p class="level0">You will need to override these definitions if they are different on your system. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">FTP, SMTP, IMAP, POP3 <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+static CURLcode my_conv_from_ebcdic_to_ascii(char *buffer, size_t length)
+{
+&nbsp; char *tempptrin, *tempptrout;
+&nbsp; size_t bytes = length;
+&nbsp; int rc;
+&nbsp; tempptrin = tempptrout = buffer;
+&nbsp; rc = platform_e2a(&tempptrin, &bytes, &tempptrout, &bytes);
+&nbsp; if(rc == PLATFORM_CONV_OK) {
+&nbsp;   return <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a>;
+&nbsp; }
+&nbsp; else {
+&nbsp;   return <a href="libcurl-errors.html#CURLECONVFAILED">CURLE_CONV_FAILED</a>;
+&nbsp; }
+}
+&nbsp;
+curl_easy_setopt(curl, CURLOPT_CONV_TO_NETWORK_FUNCTION,
+&nbsp;                my_conv_from_ebcdic_to_ascii);
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Available only if <span Class="bold">CURL_DOES_CONVERSIONS</span> was defined when libcurl was built. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLEOK">CURLE_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLEUNKNOWNOPTION">CURLE_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLOPT_CONV_FROM_NETWORK_FUNCTION.html">CURLOPT_CONV_FROM_NETWORK_FUNCTION</a>, <a Class="manpage" href="CURLOPT_CONV_FROM_UTF8_FUNCTION.html">CURLOPT_CONV_FROM_UTF8_FUNCTION</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

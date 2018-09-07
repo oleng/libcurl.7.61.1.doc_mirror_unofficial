@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLMOPT_PIPELINING</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_multi_setopt.html">curl_multi_setopt</a> / <b>CURLMOPT_PIPELINING</b></div>
+<h1> CURLMOPT_PIPELINING explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLMOPT_PIPELINING - enable HTTP pipelining and multiplexing <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0">&#35;include &lt;curl/curl.h&gt;
+<p class="level0">CURLMcode curl_multi_setopt(CURLM *handle, CURLMOPT_PIPELINING, long bitmask); <a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Pass in the <span Class="bold">bitmask</span> parameter to instruct libcurl to enable HTTP pipelining and/or HTTP/2 multiplexing for this multi handle.
+<p class="level0">When enabled, libcurl will attempt to use those protocol features when doing parallel requests to the same hosts.
+<p class="level0">For pipelining, this means that if you add a second request that can use an already existing connection, the second request will be "piped" on the same connection rather than being executed in parallel.
+<p class="level0">For multiplexing, this means that follow-up requests can re-use an existing connection and send the new request multiplexed over that at the same time as other transfers are already using that single connection.
+<p class="level0">There are several other related options that are interesting to tweak and adjust to alter how libcurl spreads out requests on different connections or not etc.
+<p class="level0">Before 7.43.0, this option was set to 1 and 0 to enable and disable HTTP/1.1 pipelining.
+<p class="level0">Starting in 7.43.0, <span Class="bold">bitmask</span>'s second bit also has a meaning, and you can ask for pipelining and multiplexing independently of each other by toggling the correct bits.
+<p class="level0"><a name="CURLPIPENOTHING"></a><span class="nroffip">CURLPIPE_NOTHING (0)</span>
+<p class="level1">Default, which means doing no attempts at pipelining or multiplexing.
+<p class="level0"><a name="CURLPIPEHTTP1"></a><span class="nroffip">CURLPIPE_HTTP1 (1)</span>
+<p class="level1">If this bit is set, libcurl will try to pipeline HTTP/1.1 requests on connections that are already established and in use to hosts.
+<p class="level1">This bit is deprecated and has no effect since version 7.62.0.
+<p class="level0"><a name="CURLPIPEMULTIPLEX"></a><span class="nroffip">CURLPIPE_MULTIPLEX (2)</span>
+<p class="level1">If this bit is set, libcurl will try to multiplex the new transfer over an existing connection if possible. This requires HTTP/2. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">Since 7.62.0, <span class="bold">CURLPIPE_MULTIPLEXbP is enabled by default.
+<p class="level0">Before that, default was <a class="bold" href="CURLMOPT_PIPELINING.html#CURLPIPENOTHING">CURLPIPE_NOTHING</a>. <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">HTTP(S) <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+CURLM *m = curl_multi_init();
+/* try HTTP/1 pipelining and HTTP/2 multiplexing */
+curl_multi_setopt(m, CURLMOPT_PIPELINING, CURLPIPE_HTTP1 |
+&nbsp;                                         CURLPIPE_MULTIPLEX);
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.16.0. Multiplex support bit added in 7.43.0. <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLMOK">CURLM_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLMUNKNOWNOPTION">CURLM_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLMOPT_MAX_PIPELINE_LENGTH.html">CURLMOPT_MAX_PIPELINE_LENGTH</a>, <a Class="manpage" href="CURLMOPT_PIPELINING_SITE_BL.html">CURLMOPT_PIPELINING_SITE_BL</a>, <a Class="manpage" href="CURLMOPT_CONTENT_LENGTH_PENALTY_SIZE.html">CURLMOPT_CONTENT_LENGTH_PENALTY_SIZE</a>, <a Class="manpage" href="CURLMOPT_CHUNK_LENGTH_PENALTY_SIZE.html">CURLMOPT_CHUNK_LENGTH_PENALTY_SIZE</a>, <a Class="manpage" href="CURLMOPT_MAX_HOST_CONNECTIONS.html">CURLMOPT_MAX_HOST_CONNECTIONS</a>, <a Class="manpage" href="CURLMOPT_MAXCONNECTS.html">CURLMOPT_MAXCONNECTS</a>, <a Class="manpage" href="CURLMOPT_MAX_HOST_CONNECTIONS.html">CURLMOPT_MAX_HOST_CONNECTIONS</a><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>

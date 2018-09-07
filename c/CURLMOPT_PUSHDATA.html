@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>CURLMOPT_PUSHDATA</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../../curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="https://curl.haxx.se/logo/curl-symbol.svg" type="image/svg+xml">
+<link rel="STYLESHEET" type="text/css" href="../../manpage.css">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="menuitem" title="libcurl C source code examples ">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="curl_multi_setopt.html">curl_multi_setopt</a> / <b>CURLMOPT_PUSHDATA</b></div>
+<h1> CURLMOPT_PUSHDATA explained </h1>
+<div class="relatedbox">
+<b>Related:</b>
+<br><a href="easy_setopt_options.html">easy options</a>
+<br><a href="multi_setopt_options.html">multi options</a>
+<br><a href="index.html">API</a>
+</div>
+<!-- generated with roffit -->
+<p class="level0"><a name="NAME"></a><h2 class="nroffsh">NAME</h2>
+<p class="level0">CURLMOPT_PUSHDATA - pointer to pass to push callback <a name="SYNOPSIS"></a><h2 class="nroffsh">SYNOPSIS</h2>
+<p class="level0"><pre class="level0">
+&#35;include &lt;curl/curl.h&gt;
+&nbsp;
+CURLMcode curl_multi_setopt(CURLM *handle, CURLMOPT_PUSHDATA, void *pointer);
+</pre>
+<p class="level0"><a name="DESCRIPTION"></a><h2 class="nroffsh">DESCRIPTION</h2>
+<p class="level0">Set <span Class="emphasis">pointer</span> to pass as the last argument to the <a Class="emphasis" href="CURLMOPT_PUSHFUNCTION.html">CURLMOPT_PUSHFUNCTION</a> callback. The pointer will not be touched or used by libcurl itself, only passed on to the callback function. <a name="DEFAULT"></a><h2 class="nroffsh">DEFAULT</h2>
+<p class="level0">NULL <a name="PROTOCOLS"></a><h2 class="nroffsh">PROTOCOLS</h2>
+<p class="level0">HTTP(S) <a name="EXAMPLE"></a><h2 class="nroffsh">EXAMPLE</h2>
+<p class="level0"><pre class="level0">
+/* only allow pushes for file names starting with "push-" */
+int push_callback(CURL *parent,
+&nbsp;                 CURL *easy,
+&nbsp;                 size_t num_headers,
+&nbsp;                 struct curl_pushheaders *headers,
+&nbsp;                 void *userp)
+{
+&nbsp; char *headp;
+&nbsp; int *transfers = (int *)userp;
+&nbsp; FILE *out;
+&nbsp; headp = curl_pushheader_byname(headers, ":path");
+&nbsp; if(headp && !strncmp(headp, "/push-", 6)) {
+&nbsp;   fprintf(stderr, "The PATH is %s\n", headp);
+&nbsp;
+&nbsp;   /* save the push here */
+&nbsp;   out = fopen("pushed-stream", "wb");
+&nbsp;
+&nbsp;   /* write to this file */
+&nbsp;   curl_easy_setopt(easy, CURLOPT_WRITEDATA, out);
+&nbsp;
+&nbsp;   (*transfers)++; /* one more */
+&nbsp;
+&nbsp;   return CURL_PUSH_OK;
+&nbsp; }
+&nbsp; return CURL_PUSH_DENY;
+}
+&nbsp;
+curl_multi_setopt(multi, CURLMOPT_PUSHFUNCTION, push_callback);
+curl_multi_setopt(multi, CURLMOPT_PUSHDATA, &counter);
+</pre>
+<p class="level0"><a name="AVAILABILITY"></a><h2 class="nroffsh">AVAILABILITY</h2>
+<p class="level0">Added in 7.44.0 <a name="RETURN"></a><h2 class="nroffsh">RETURN VALUE</h2>
+<p class="level0">Returns <a href="libcurl-errors.html#CURLMOK">CURLM_OK</a> if the option is supported, and <a href="libcurl-errors.html#CURLMUNKNOWNOPTION">CURLM_UNKNOWN_OPTION</a> if not. <a name="SEE"></a><h2 class="nroffsh">SEE ALSO</h2>
+<p class="level0"><a Class="manpage" href="CURLMOPT_PUSHFUNCTION.html">CURLMOPT_PUSHFUNCTION</a>, <a Class="manpage" href="CURLMOPT_PIPELINING.html">CURLMOPT_PIPELINING</a>, <a Class="manpage" href="CURLOPT_PIPEWAIT.html">CURLOPT_PIPEWAIT</a>, <span Class="manpage">RFC 7540</span><p class="roffit">
+ This HTML page was made with <a href="http://daniel.haxx.se/projects/roffit/">roffit</a>.
+</div>
+</div>
+
+</BODY>
+</HTML>
