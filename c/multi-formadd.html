@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - multi-formadd.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../css/curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>multi-formadd.c</b></div>
+<h1> multi-formadd.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/multi-formadd.c">Download multi-formadd.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * using the multi interface to do a multipart formpost without blocking
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;sys/time.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+&nbsp;
+  CURLM *multi_handle;
+  <B><FONT COLOR="#228B22">int</FONT></B> still_running;
+&nbsp;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_httppost *formpost = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_httppost *lastptr = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *headerlist = NULL;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> buf[] = <B><FONT COLOR="#BC8F8F">&quot;Expect:&quot;</FONT></B>;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the file upload field. This makes libcurl load data from
+     the given file name when <a href="curl_easy_perform.html">curl_easy_perform</a>() is called. */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;sendfile&quot;</FONT></B>,
+               CURLFORM_FILE, <B><FONT COLOR="#BC8F8F">&quot;postit2.c&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the filename field */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;filename&quot;</FONT></B>,
+               CURLFORM_COPYCONTENTS, <B><FONT COLOR="#BC8F8F">&quot;postit2.c&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the submit field too, even if this is rarely needed */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;submit&quot;</FONT></B>,
+               CURLFORM_COPYCONTENTS, <B><FONT COLOR="#BC8F8F">&quot;send&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  multi_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+&nbsp;
+  <I><FONT COLOR="#B22222">/* initialize custom header list (stating that Expect: 100-continue is not
+     wanted */ </FONT></I>
+  headerlist = <a href="curl_slist_append.html">curl_slist_append</a>(headerlist, buf);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl &amp;&amp; multi_handle) {
+&nbsp;
+    <I><FONT COLOR="#B22222">/* what URL that receives this POST */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;http://www.example.com/upload.cgi&quot;</FONT></B>);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, headerlist);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPPOST.html">CURLOPT_HTTPPOST</a>, formpost);
+&nbsp;
+    <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(multi_handle, curl);
+&nbsp;
+    <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+&nbsp;
+    <B><FONT COLOR="#A020F0">do</FONT></B> {
+      <B><FONT COLOR="#228B22">struct</FONT></B> timeval timeout;
+      <B><FONT COLOR="#228B22">int</FONT></B> rc; <I><FONT COLOR="#B22222">/* select() return code */ </FONT></I>
+      CURLMcode mc; <I><FONT COLOR="#B22222">/* <a href="curl_multi_fdset.html">curl_multi_fdset</a>() return code */ </FONT></I>
+&nbsp;
+      fd_set fdread;
+      fd_set fdwrite;
+      fd_set fdexcep;
+      <B><FONT COLOR="#228B22">int</FONT></B> maxfd = -1;
+&nbsp;
+      <B><FONT COLOR="#228B22">long</FONT></B> curl_timeo = -1;
+&nbsp;
+      FD_ZERO(&amp;fdread);
+      FD_ZERO(&amp;fdwrite);
+      FD_ZERO(&amp;fdexcep);
+&nbsp;
+      <I><FONT COLOR="#B22222">/* set a suitable timeout to play around with */ </FONT></I>
+      timeout.tv_sec = 1;
+      timeout.tv_usec = 0;
+&nbsp;
+      <a href="curl_multi_timeout.html">curl_multi_timeout</a>(multi_handle, &amp;curl_timeo);
+      <B><FONT COLOR="#A020F0">if</FONT></B>(curl_timeo &gt;= 0) {
+        timeout.tv_sec = curl_timeo / 1000;
+        <B><FONT COLOR="#A020F0">if</FONT></B>(timeout.tv_sec &gt; 1)
+          timeout.tv_sec = 1;
+        <B><FONT COLOR="#A020F0">else</FONT></B>
+          timeout.tv_usec = (curl_timeo % 1000) * 1000;
+      }
+&nbsp;
+      <I><FONT COLOR="#B22222">/* get file descriptors from the transfers */ </FONT></I>
+      mc = <a href="curl_multi_fdset.html">curl_multi_fdset</a>(multi_handle, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;maxfd);
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(mc != CURLM_OK) {
+        fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_multi_fdset.html">curl_multi_fdset</a>() failed, code %d.\n&quot;</FONT></B>, mc);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+&nbsp;
+      <I><FONT COLOR="#B22222">/* On success the value of maxfd is guaranteed to be &gt;= -1. We call
+         select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+         no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+         to sleep 100ms, which is the minimum suggested value in the
+         <a href="curl_multi_fdset.html">curl_multi_fdset</a>() doc. */ </FONT></I>
+&nbsp;
+      <B><FONT COLOR="#A020F0">if</FONT></B>(maxfd == -1) {
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">_WIN32</FONT>
+        Sleep(100);
+        rc = 0;
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+        <I><FONT COLOR="#B22222">/* Portable sleep for platforms other than Windows. */ </FONT></I>
+        <B><FONT COLOR="#228B22">struct</FONT></B> timeval wait = { 0, 100 * 1000 }; <I><FONT COLOR="#B22222">/* 100ms */ </FONT></I>
+        rc = select(0, NULL, NULL, NULL, &amp;wait);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B> {
+        <I><FONT COLOR="#B22222">/* Note that on some platforms 'timeout' may be modified by select().
+           If you need access to the original value save a copy beforehand. */ </FONT></I>
+        rc = select(maxfd + 1, &amp;fdread, &amp;fdwrite, &amp;fdexcep, &amp;timeout);
+      }
+&nbsp;
+      <B><FONT COLOR="#A020F0">switch</FONT></B>(rc) {
+      <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">-1</FONT></B>:
+        <I><FONT COLOR="#B22222">/* select error */ </FONT></I>
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">0</FONT></B>:
+      <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+        <I><FONT COLOR="#B22222">/* timeout or readable/writable sockets */ </FONT></I>
+        printf(<B><FONT COLOR="#BC8F8F">&quot;perform!\n&quot;</FONT></B>);
+        <a href="curl_multi_perform.html">curl_multi_perform</a>(multi_handle, &amp;still_running);
+        printf(<B><FONT COLOR="#BC8F8F">&quot;running: %d!\n&quot;</FONT></B>, still_running);
+        <B><FONT COLOR="#A020F0">break</FONT></B>;
+      }
+    } <B><FONT COLOR="#A020F0">while</FONT></B>(still_running);
+&nbsp;
+    <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(multi_handle);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* then cleanup the formpost chain */ </FONT></I>
+    <a href="curl_formfree.html">curl_formfree</a>(formpost);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* free slist */ </FONT></I>
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(headerlist);
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

@@ -1,0 +1,322 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - rtsp.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../css/curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>rtsp.c</b></div>
+<h1> rtsp.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/rtsp.c">Download rtsp.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/*
+ * Copyright (c) 2011, Jim Hollinger
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *   * Neither the name of Jim Hollinger nor the names of its contributors
+ *     may be used to endorse or promote products derived from this
+ *     software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * A basic RTSP transfer
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">if</FONT></B> <FONT COLOR="#B8860B">defined</FONT> (<FONT COLOR="#B8860B">WIN32</FONT>)
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;conio.h&gt;</FONT></B>  <I><FONT COLOR="#B22222"> </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;termios.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;unistd.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">_getch</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> termios oldt, newt;
+  <B><FONT COLOR="#228B22">int</FONT></B> ch;
+  tcgetattr(STDIN_FILENO, &amp;oldt);
+  newt = oldt;
+  newt.c_lflag &amp;= ~( ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &amp;newt);
+  ch = getchar();
+  tcsetattr(STDIN_FILENO, TCSANOW, &amp;oldt);
+  <B><FONT COLOR="#A020F0">return</FONT></B> ch;
+}
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <FONT COLOR="#B8860B">VERSION_STR</FONT>  <B><FONT COLOR="#BC8F8F">&quot;V1.0&quot;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* error handling macros */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <B><FONT COLOR="#0000FF">my_curl_easy_setopt</FONT></B>(A, B, C)                             \&nbsp;
+  res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>((A), (B), (C));                         \&nbsp;
+  if(res != CURLE_OK)                                            \&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_setopt.html">curl_easy_setopt</a>(%s, %s, %s) failed: %d\n&quot;</FONT></B>, \&nbsp;
+#A , #B, #C, res);
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">define</FONT></B> <B><FONT COLOR="#0000FF">my_curl_easy_perform</FONT></B>(A)                                     \&nbsp;
+  res = <a href="curl_easy_perform.html">curl_easy_perform</a>(A);                                       \&nbsp;
+  if(res != CURLE_OK)                                               \&nbsp;
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>(%s) failed: %d\n&quot;</FONT></B>, #A, res);
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* send RTSP OPTIONS request */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">rtsp_options</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *uri)
+{
+  CURLcode res = CURLE_OK;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP: OPTIONS %s\n&quot;</FONT></B>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_STREAM_URI.html">CURLOPT_RTSP_STREAM_URI</a>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURL_RTSPREQ_OPTIONS);
+  my_<a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* send RTSP DESCRIBE request and write sdp response to a file */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">rtsp_describe</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *uri,
+                          <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *sdp_filename)
+{
+  CURLcode res = CURLE_OK;
+  FILE *sdp_fp = fopen(sdp_filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP: DESCRIBE %s\n&quot;</FONT></B>, uri);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(sdp_fp == NULL) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Could not open '%s' for writing\n&quot;</FONT></B>, sdp_filename);
+    sdp_fp = stdout;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Writing SDP to '%s'\n&quot;</FONT></B>, sdp_filename);
+  }
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, sdp_fp);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURL_RTSPREQ_DESCRIBE);
+  my_<a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, stdout);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(sdp_fp != stdout) {
+    fclose(sdp_fp);
+  }
+}
+&nbsp;
+<I><FONT COLOR="#B22222">/* send RTSP SETUP request */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">rtsp_setup</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *uri, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *transport)
+{
+  CURLcode res = CURLE_OK;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP: SETUP %s\n&quot;</FONT></B>, uri);
+  printf(<B><FONT COLOR="#BC8F8F">&quot;      TRANSPORT %s\n&quot;</FONT></B>, transport);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_STREAM_URI.html">CURLOPT_RTSP_STREAM_URI</a>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_TRANSPORT.html">CURLOPT_RTSP_TRANSPORT</a>, transport);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURL_RTSPREQ_SETUP);
+  my_<a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* send RTSP PLAY request */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">rtsp_play</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *uri, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *range)
+{
+  CURLcode res = CURLE_OK;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP: PLAY %s\n&quot;</FONT></B>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_STREAM_URI.html">CURLOPT_RTSP_STREAM_URI</a>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RANGE.html">CURLOPT_RANGE</a>, range);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURL_RTSPREQ_PLAY);
+  my_<a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* switch off using range again */ </FONT></I>
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RANGE.html">CURLOPT_RANGE</a>, NULL);
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* send RTSP TEARDOWN request */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">rtsp_teardown</FONT></B>(CURL *curl, <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *uri)
+{
+  CURLcode res = CURLE_OK;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP: TEARDOWN %s\n&quot;</FONT></B>, uri);
+  my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_RTSP_REQUEST.html">CURLOPT_RTSP_REQUEST</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)CURL_RTSPREQ_TEARDOWN);
+  my_<a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* convert url into an sdp filename */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">get_sdp_filename</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url, <B><FONT COLOR="#228B22">char</FONT></B> *sdp_filename,
+                             size_t namelen)
+{
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *s = strrchr(url, <B><FONT COLOR="#BC8F8F">'/'</FONT></B>);
+  strcpy(sdp_filename, <B><FONT COLOR="#BC8F8F">&quot;video.sdp&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(s != NULL) {
+    s++;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(s[0] != <B><FONT COLOR="#BC8F8F">'\0'</FONT></B>) {
+      snprintf(sdp_filename, namelen, <B><FONT COLOR="#BC8F8F">&quot;%s.sdp&quot;</FONT></B>, s);
+    }
+  }
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* scan sdp file for media control attribute */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">get_media_control_attribute</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *sdp_filename,
+                                        <B><FONT COLOR="#228B22">char</FONT></B> *control)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> max_len = 256;
+  <B><FONT COLOR="#228B22">char</FONT></B> *s = malloc(max_len);
+  FILE *sdp_fp = fopen(sdp_filename, <B><FONT COLOR="#BC8F8F">&quot;rb&quot;</FONT></B>);
+  control[0] = <B><FONT COLOR="#BC8F8F">'\0'</FONT></B>;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(sdp_fp != NULL) {
+    <B><FONT COLOR="#A020F0">while</FONT></B>(fgets(s, max_len - 2, sdp_fp) != NULL) {
+      sscanf(s, <B><FONT COLOR="#BC8F8F">&quot; a = control: %s&quot;</FONT></B>, control);
+    }
+    fclose(sdp_fp);
+  }
+  free(s);
+}
+&nbsp;
+&nbsp;
+<I><FONT COLOR="#B22222">/* main app */ </FONT></I>
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> * <B><FONT COLOR="#228B22">const</FONT></B> argv[])
+{
+#<B ><FONT COLOR="#5F9EA0">if</FONT></B> 1
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *transport = <B><FONT COLOR="#BC8F8F">&quot;RTP/AVP;unicast;client_port=1234-1235&quot;</FONT></B>;  <I><FONT COLOR="#B22222">/* UDP */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+  <I><FONT COLOR="#B22222">/* TCP */ </FONT></I>
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *transport = <B><FONT COLOR="#BC8F8F">&quot;RTP/AVP/TCP;unicast;client_port=1234-1235&quot;</FONT></B>;
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *range = <B><FONT COLOR="#BC8F8F">&quot;0.000-&quot;</FONT></B>;
+  <B><FONT COLOR="#228B22">int</FONT></B> rc = EXIT_SUCCESS;
+  <B><FONT COLOR="#228B22">char</FONT></B> *base_name = NULL;
+&nbsp;
+  printf(<B><FONT COLOR="#BC8F8F">&quot;\nRTSP request %s\n&quot;</FONT></B>, VERSION_STR);
+  printf(<B><FONT COLOR="#BC8F8F">&quot;    Project web site: http://code.google.com/p/rtsprequest/\n&quot;</FONT></B>);
+  printf(<B><FONT COLOR="#BC8F8F">&quot;    Requires curl V7.20 or greater\n\n&quot;</FONT></B>);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* check command line */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>((argc != 2) &amp;&amp; (argc != 3)) {
+    base_name = strrchr(argv[0], <B><FONT COLOR="#BC8F8F">'/'</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(base_name == NULL) {
+      base_name = strrchr(argv[0], <B><FONT COLOR="#BC8F8F">'\\'</FONT></B>);
+    }
+    <B><FONT COLOR="#A020F0">if</FONT></B>(base_name == NULL) {
+      base_name = argv[0];
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      base_name++;
+    }
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Usage:   %s url [transport]\n&quot;</FONT></B>, base_name);
+    printf(<B><FONT COLOR="#BC8F8F">&quot;         url of video server\n&quot;</FONT></B>);
+    printf(<B><FONT COLOR="#BC8F8F">&quot;         transport (optional) specifier for media stream&quot;</FONT></B>
+           <B><FONT COLOR="#BC8F8F">&quot; protocol\n&quot;</FONT></B>);
+    printf(<B><FONT COLOR="#BC8F8F">&quot;         default transport: %s\n&quot;</FONT></B>, transport);
+    printf(<B><FONT COLOR="#BC8F8F">&quot;Example: %s rtsp://192.168.0.2/media/video1\n\n&quot;</FONT></B>, base_name);
+    rc = EXIT_FAILURE;
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url = argv[1];
+    <B><FONT COLOR="#228B22">char</FONT></B> *uri = malloc(strlen(url) + 32);
+    <B><FONT COLOR="#228B22">char</FONT></B> *sdp_filename = malloc(strlen(url) + 32);
+    <B><FONT COLOR="#228B22">char</FONT></B> *control = malloc(strlen(url) + 32);
+    CURLcode res;
+    get_sdp_filename(url, sdp_filename, strlen(url) + 32);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(argc == 3) {
+      transport = argv[2];
+    }
+&nbsp;
+    <I><FONT COLOR="#B22222">/* initialize curl */ </FONT></I>
+    res = <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res == CURLE_OK) {
+      curl_version_info_data *data = <a href="curl_version_info.html">curl_version_info</a>(CURLVERSION_NOW);
+      CURL *curl;
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;    curl V%s loaded\n&quot;</FONT></B>, data-&gt;version);
+&nbsp;
+      <I><FONT COLOR="#B22222">/* initialize this curl session */ </FONT></I>
+      curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+      <B><FONT COLOR="#A020F0">if</FONT></B>(curl != NULL) {
+        my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 0L);
+        my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_NOPROGRESS.html">CURLOPT_NOPROGRESS</a>, 1L);
+        my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HEADERDATA.html">CURLOPT_HEADERDATA</a>, stdout);
+        my_<a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* request server options */ </FONT></I>
+        snprintf(uri, strlen(url) + 32, <B><FONT COLOR="#BC8F8F">&quot;%s&quot;</FONT></B>, url);
+        rtsp_options(curl, uri);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* request session description and write response to sdp file */ </FONT></I>
+        rtsp_describe(curl, uri, sdp_filename);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* get media control attribute from sdp file */ </FONT></I>
+        get_media_control_attribute(sdp_filename, control);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* setup media stream */ </FONT></I>
+        snprintf(uri, strlen(url) + 32, <B><FONT COLOR="#BC8F8F">&quot;%s/%s&quot;</FONT></B>, url, control);
+        rtsp_setup(curl, uri, transport);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* start playing media stream */ </FONT></I>
+        snprintf(uri, strlen(url) + 32, <B><FONT COLOR="#BC8F8F">&quot;%s/&quot;</FONT></B>, url);
+        rtsp_play(curl, uri, range);
+        printf(<B><FONT COLOR="#BC8F8F">&quot;Playing video, press any key to stop ...&quot;</FONT></B>);
+        _getch();
+        printf(<B><FONT COLOR="#BC8F8F">&quot;\n&quot;</FONT></B>);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* teardown session */ </FONT></I>
+        rtsp_teardown(curl, uri);
+&nbsp;
+        <I><FONT COLOR="#B22222">/* cleanup */ </FONT></I>
+        <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+        curl = NULL;
+      }
+      <B><FONT COLOR="#A020F0">else</FONT></B> {
+        fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_init.html">curl_easy_init</a>() failed\n&quot;</FONT></B>);
+      }
+      <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+    }
+    <B><FONT COLOR="#A020F0">else</FONT></B> {
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_global_init.html">curl_global_init</a>(%s) failed: %d\n&quot;</FONT></B>,
+              <B><FONT COLOR="#BC8F8F">&quot;CURL_GLOBAL_ALL&quot;</FONT></B>, res);
+    }
+    free(control);
+    free(sdp_filename);
+    free(uri);
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> rc;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

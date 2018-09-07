@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - post-callback.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../css/curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>post-callback.c</b></div>
+<h1> post-callback.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/post-callback.c">Download post-callback.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * Issue an HTTP POST and provide the data through the read callback.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<I><FONT COLOR="#B22222">/* silly test data to POST */ </FONT></I>
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> data[]=<B><FONT COLOR="#BC8F8F">&quot;Lorem ipsum dolor sit amet, consectetur adipiscing &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;elit. Sed vel urna neque. Ut quis leo metus. Quisque eleifend, ex at &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;laoreet rhoncus, odio ipsum semper metus, at tempus ante urna in mauris. &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;Suspendisse ornare tempor venenatis. Ut dui neque, pellentesque a varius &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;eget, mattis vitae ligula. Fusce ut pharetra est. Ut ullamcorper mi ac &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;sollicitudin semper. Praesent sit amet tellus varius, posuere nulla non, &quot;</FONT></B>
+  <B><FONT COLOR="#BC8F8F">&quot;rhoncus ipsum.&quot;</FONT></B>;
+&nbsp;
+<B><FONT COLOR="#228B22">struct</FONT></B> WriteThis {
+  <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *readptr;
+  size_t sizeleft;
+};
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> size_t <B><FONT COLOR="#0000FF">read_callback</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B> *dest, size_t size, size_t nmemb, <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#228B22">struct</FONT></B> WriteThis *wt = (<B><FONT COLOR="#228B22">struct</FONT></B> WriteThis *)userp;
+  size_t buffer_size = size*nmemb;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(wt-&gt;sizeleft) {
+    <I><FONT COLOR="#B22222">/* copy as much as possible from the source to the destination */ </FONT></I>
+    size_t copy_this_much = wt-&gt;sizeleft;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(copy_this_much &gt; buffer_size)
+      copy_this_much = buffer_size;
+    memcpy(dest, wt-&gt;readptr, copy_this_much);
+&nbsp;
+    wt-&gt;readptr += copy_this_much;
+    wt-&gt;sizeleft -= copy_this_much;
+    <B><FONT COLOR="#A020F0">return</FONT></B> copy_this_much; <I><FONT COLOR="#B22222">/* we copied this many bytes */ </FONT></I>
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0; <I><FONT COLOR="#B22222">/* no more data left to deliver */ </FONT></I>
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  CURL *curl;
+  CURLcode res;
+&nbsp;
+  <B><FONT COLOR="#228B22">struct</FONT></B> WriteThis wt;
+&nbsp;
+  wt.readptr = data;
+  wt.sizeleft = strlen(data);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* In windows, this will init the winsock stuff */ </FONT></I>
+  res = <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_DEFAULT);
+  <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+  <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_global_init.html">curl_global_init</a>() failed: %s\n&quot;</FONT></B>,
+            <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  <I><FONT COLOR="#B22222">/* get a curl handle */ </FONT></I>
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* First set the URL that is about to receive our POST. */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;https://example.com/index.cgi&quot;</FONT></B>);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Now specify we want to POST data */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_POST.html">CURLOPT_POST</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* we want to use our own read function */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READFUNCTION.html">CURLOPT_READFUNCTION</a>, read_callback);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* pointer to pass to our read function */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_READDATA.html">CURLOPT_READDATA</a>, &amp;wt);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* get verbose debug output please */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_VERBOSE.html">CURLOPT_VERBOSE</a>, 1L);
+&nbsp;
+    <I><FONT COLOR="#B22222">/*
+      If you use POST to a HTTP 1.1 server, you can send data without knowing
+      the size before starting the POST if you use chunked encoding. You
+      enable this by adding a header like &quot;Transfer-Encoding: chunked&quot; with
+      <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>. With HTTP 1.0 or without chunked transfer, you must
+      specify the size in the request.
+    */ </FONT></I>
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">USE_CHUNKED</FONT>
+    {
+      <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *chunk = NULL;
+&nbsp;
+      chunk = <a href="curl_slist_append.html">curl_slist_append</a>(chunk, <B><FONT COLOR="#BC8F8F">&quot;Transfer-Encoding: chunked&quot;</FONT></B>);
+      res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, chunk);
+      <I><FONT COLOR="#B22222">/* use <a href="curl_slist_free_all.html">curl_slist_free_all</a>() after the *perform() call to free this
+         list again */ </FONT></I>
+    }
+#<B ><FONT COLOR="#5F9EA0">else</FONT></B>
+    <I><FONT COLOR="#B22222">/* Set the expected POST size. If you want to POST large amounts of data,
+       consider <a href="CURLOPT_POSTFIELDSIZE_LARGE.html">CURLOPT_POSTFIELDSIZE_LARGE</a> */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_POSTFIELDSIZE.html">CURLOPT_POSTFIELDSIZE</a>, (<B><FONT COLOR="#228B22">long</FONT></B>)wt.sizeleft);
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">ifdef</FONT></B> <FONT COLOR="#B8860B">DISABLE_EXPECT</FONT>
+    <I><FONT COLOR="#B22222">/*
+      Using POST with HTTP 1.1 implies the use of a &quot;Expect: 100-continue&quot;
+      header.  You can disable this header with <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a> as usual.
+      NOTE: if you want chunked transfer too, you need to combine these two
+      since you can only set one list of headers with <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>. */ </FONT></I>
+&nbsp;
+    <I><FONT COLOR="#B22222">/* A less good option would be to enforce HTTP 1.0, but that might also
+       have other implications. */ </FONT></I>
+    {
+      <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *chunk = NULL;
+&nbsp;
+      chunk = <a href="curl_slist_append.html">curl_slist_append</a>(chunk, <B><FONT COLOR="#BC8F8F">&quot;Expect:&quot;</FONT></B>);
+      res = <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, chunk);
+      <I><FONT COLOR="#B22222">/* use <a href="curl_slist_free_all.html">curl_slist_free_all</a>() after the *perform() call to free this
+         list again */ </FONT></I>
+    }
+#<B ><FONT COLOR="#5F9EA0">endif</FONT></B>
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Perform the request, res will get the return code */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+  }
+  <a href="curl_global_cleanup.html">curl_global_cleanup</a>();
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

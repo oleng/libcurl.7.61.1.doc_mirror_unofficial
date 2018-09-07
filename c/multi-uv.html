@@ -1,0 +1,270 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - multi-uv.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../css/curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>multi-uv.c</b></div>
+<h1> multi-uv.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/multi-uv.c">Download multi-uv.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2018, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+&nbsp;
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * multi_socket API using libuv
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* Example application using the multi socket interface to download multiple
+   files in parallel, powered by libuv.
+&nbsp;
+   Requires libuv and (of course) libcurl.
+&nbsp;
+   See https://nikhilm.github.com/uvbook/ for more information on libuv.
+*/ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdlib.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;uv.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+uv_loop_t *loop;
+CURLM *curl_handle;
+uv_timer_t timeout;
+&nbsp;
+<B><FONT COLOR="#228B22">typedef</FONT></B> <B><FONT COLOR="#228B22">struct</FONT></B> curl_context_s {
+  uv_poll_t poll_handle;
+  curl_socket_t sockfd;
+} curl_context_t;
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> curl_context_t* <B><FONT COLOR="#0000FF">create_curl_context</FONT></B>(curl_socket_t sockfd)
+{
+  curl_context_t *context;
+&nbsp;
+  context = (curl_context_t *) malloc(<B><FONT COLOR="#A020F0">sizeof</FONT></B>(*context));
+&nbsp;
+  context-&gt;sockfd = sockfd;
+&nbsp;
+  uv_poll_init_socket(loop, &amp;context-&gt;poll_handle, sockfd);
+  context-&gt;poll_handle.data = context;
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> context;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">curl_close_cb</FONT></B>(uv_handle_t *handle)
+{
+  curl_context_t *context = (curl_context_t *) handle-&gt;data;
+  free(context);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">destroy_curl_context</FONT></B>(curl_context_t *context)
+{
+  uv_close((uv_handle_t *) &amp;context-&gt;poll_handle, curl_close_cb);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">add_download</FONT></B>(<B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> *url, <B><FONT COLOR="#228B22">int</FONT></B> num)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> filename[50];
+  FILE *file;
+  CURL *handle;
+&nbsp;
+  snprintf(filename, 50, <B><FONT COLOR="#BC8F8F">&quot;%d.download&quot;</FONT></B>, num);
+&nbsp;
+  file = fopen(filename, <B><FONT COLOR="#BC8F8F">&quot;wb&quot;</FONT></B>);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(!file) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Error opening %s\n&quot;</FONT></B>, filename);
+    <B><FONT COLOR="#A020F0">return</FONT></B>;
+  }
+&nbsp;
+  handle = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_WRITEDATA.html">CURLOPT_WRITEDATA</a>, file);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_PRIVATE.html">CURLOPT_PRIVATE</a>, file);
+  <a href="curl_easy_setopt.html">curl_easy_setopt</a>(handle, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, url);
+  <a href="curl_multi_add_handle.html">curl_multi_add_handle</a>(curl_handle, handle);
+  fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Added download %s -&gt; %s\n&quot;</FONT></B>, url, filename);
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">check_multi_info</FONT></B>(<B><FONT COLOR="#228B22">void</FONT></B>)
+{
+  <B><FONT COLOR="#228B22">char</FONT></B> *done_url;
+  CURLMsg *message;
+  <B><FONT COLOR="#228B22">int</FONT></B> pending;
+  CURL *easy_handle;
+  FILE *file;
+&nbsp;
+  <B><FONT COLOR="#A020F0">while</FONT></B>((message = <a href="curl_multi_info_read.html">curl_multi_info_read</a>(curl_handle, &amp;pending))) {
+    <B><FONT COLOR="#A020F0">switch</FONT></B>(message-&gt;msg) {
+    <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURLMSG_DONE</FONT></B>:
+      <I><FONT COLOR="#B22222">/* Do not use message data after calling <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>() and
+         curl_easy_cleanup(). As per <a href="curl_multi_info_read.html">curl_multi_info_read</a>() docs:
+         &quot;WARNING: The data the returned pointer points to will not survive
+         calling curl_multi_cleanup, curl_multi_remove_handle or
+         curl_easy_cleanup.&quot; */ </FONT></I>
+      easy_handle = message-&gt;easy_handle;
+&nbsp;
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy_handle, <a href="CURLINFO_EFFECTIVE_URL.html">CURLINFO_EFFECTIVE_URL</a>, &amp;done_url);
+      <a href="curl_easy_getinfo.html">curl_easy_getinfo</a>(easy_handle, <a href="CURLINFO_PRIVATE.html">CURLINFO_PRIVATE</a>, &amp;file);
+      printf(<B><FONT COLOR="#BC8F8F">&quot;%s DONE\n&quot;</FONT></B>, done_url);
+&nbsp;
+      <a href="curl_multi_remove_handle.html">curl_multi_remove_handle</a>(curl_handle, easy_handle);
+      <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(easy_handle);
+      <B><FONT COLOR="#A020F0">if</FONT></B>(file) {
+        fclose(file);
+      }
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+&nbsp;
+    <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;CURLMSG default\n&quot;</FONT></B>);
+      <B><FONT COLOR="#A020F0">break</FONT></B>;
+    }
+  }
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">curl_perform</FONT></B>(uv_poll_t *req, <B><FONT COLOR="#228B22">int</FONT></B> status, <B><FONT COLOR="#228B22">int</FONT></B> events)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> running_handles;
+  <B><FONT COLOR="#228B22">int</FONT></B> flags = 0;
+  curl_context_t *context;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(events &amp; UV_READABLE)
+    flags |= CURL_CSELECT_IN;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(events &amp; UV_WRITABLE)
+    flags |= CURL_CSELECT_OUT;
+&nbsp;
+  context = (curl_context_t *) req-&gt;data;
+&nbsp;
+  <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(curl_handle, context-&gt;sockfd, flags,
+                           &amp;running_handles);
+&nbsp;
+  check_multi_info();
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">void</FONT></B> <B><FONT COLOR="#0000FF">on_timeout</FONT></B>(uv_timer_t *req)
+{
+  <B><FONT COLOR="#228B22">int</FONT></B> running_handles;
+  <a href="curl_multi_socket_action.html">curl_multi_socket_action</a>(curl_handle, CURL_SOCKET_TIMEOUT, 0,
+                           &amp;running_handles);
+  check_multi_info();
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">start_timeout</FONT></B>(CURLM *multi, <B><FONT COLOR="#228B22">long</FONT></B> timeout_ms, <B><FONT COLOR="#228B22">void</FONT></B> *userp)
+{
+  <B><FONT COLOR="#A020F0">if</FONT></B>(timeout_ms &lt; 0) {
+    uv_timer_stop(&amp;timeout);
+  }
+  <B><FONT COLOR="#A020F0">else</FONT></B> {
+    <B><FONT COLOR="#A020F0">if</FONT></B>(timeout_ms == 0)
+      timeout_ms = 1; <I><FONT COLOR="#B22222">/* 0 means directly call socket_action, but we'll do it
+                         in a bit */ </FONT></I>
+    uv_timer_start(&amp;timeout, on_timeout, timeout_ms, 0);
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">handle_socket</FONT></B>(CURL *easy, curl_socket_t s, <B><FONT COLOR="#228B22">int</FONT></B> action, <B><FONT COLOR="#228B22">void</FONT></B> *userp,
+                  <B><FONT COLOR="#228B22">void</FONT></B> *socketp)
+{
+  curl_context_t *curl_context;
+  <B><FONT COLOR="#228B22">int</FONT></B> events = 0;
+&nbsp;
+  <B><FONT COLOR="#A020F0">switch</FONT></B>(action) {
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURL_POLL_IN</FONT></B>:
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURL_POLL_OUT</FONT></B>:
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURL_POLL_INOUT</FONT></B>:
+    curl_context = socketp ?
+      (curl_context_t *) socketp : create_<a href="https://curl.haxx.se/libcurl/c/curl_context.html">curl_context</a>(s);
+&nbsp;
+    <a href="curl_multi_assign.html">curl_multi_assign</a>(curl_handle, s, (<B><FONT COLOR="#228B22">void</FONT></B> *) curl_context);
+&nbsp;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(action != CURL_POLL_IN)
+      events |= UV_WRITABLE;
+    <B><FONT COLOR="#A020F0">if</FONT></B>(action != CURL_POLL_OUT)
+      events |= UV_READABLE;
+&nbsp;
+    uv_poll_start(&amp;curl_context-&gt;poll_handle, events, curl_perform);
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#A020F0">case</FONT></B> <B><FONT COLOR="#5F9EA0">CURL_POLL_REMOVE</FONT></B>:
+    <B><FONT COLOR="#A020F0">if</FONT></B>(socketp) {
+      uv_poll_stop(&amp;((curl_context_t*)socketp)-&gt;poll_handle);
+      destroy_<a href="https://curl.haxx.se/libcurl/c/curl_context.html">curl_context</a>((curl_context_t*) socketp);
+      <a href="curl_multi_assign.html">curl_multi_assign</a>(curl_handle, s, NULL);
+    }
+    <B><FONT COLOR="#A020F0">break</FONT></B>;
+  <B><FONT COLOR="#5F9EA0">default</FONT></B>:
+    abort();
+  }
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> **argv)
+{
+  loop = uv_default_loop();
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(argc &lt;= 1)
+    <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+&nbsp;
+  <B><FONT COLOR="#A020F0">if</FONT></B>(<a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL)) {
+    fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;Could not init curl\n&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">return</FONT></B> 1;
+  }
+&nbsp;
+  uv_timer_init(loop, &amp;timeout);
+&nbsp;
+  curl_handle = <a href="curl_multi_init.html">curl_multi_init</a>();
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(curl_handle, <a href="CURLMOPT_SOCKETFUNCTION.html">CURLMOPT_SOCKETFUNCTION</a>, handle_socket);
+  <a href="curl_multi_setopt.html">curl_multi_setopt</a>(curl_handle, <a href="CURLMOPT_TIMERFUNCTION.html">CURLMOPT_TIMERFUNCTION</a>, start_timeout);
+&nbsp;
+  <B><FONT COLOR="#A020F0">while</FONT></B>(argc-- &gt; 1) {
+    add_download(argv[argc], argc);
+  }
+&nbsp;
+  uv_run(loop, UV_RUN_DEFAULT);
+  <a href="curl_multi_cleanup.html">curl_multi_cleanup</a>(curl_handle);
+&nbsp;
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>

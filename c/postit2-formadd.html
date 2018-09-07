@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML>
+<HEAD> <TITLE>libcurl example - postit2-formadd.c</TITLE>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+<link rel="stylesheet" type="text/css" href="../css/curl.css">
+<link rel="shortcut icon" href="../../favicon.ico">
+<link rel="icon" href="curl-symbol.svg" type="image/svg+xml">
+</HEAD>
+<body bgcolor="#ffffff" text="#000000">
+<div class="main">
+<div class="menu">
+<a href="libcurl.html" class="menuitem" title="Overview">Overview</a>
+<a href="libcurl-tutorial.html" class="menuitem" title="Tutorial">Tutorial</a>
+<a href="libcurl-errors.html" class="menuitem" title="Error Codes">Errors</a>
+<a href="libcurl-env.html" class="menuitem" title="Environment variables ">Environment</a>
+<a href="example.html" class="itemselect">Examples</a>
+<a href="symbols-in-versions.html" class="menuitem" title="In which versions were which symbols introduced">Symbols</a>
+<a href="allfuncs.html" class="menuitem" title="List of all libcurl functions">Index</a>
+<a href="libcurl-easy.html" class="menuitem" title="Easy interface tutorial">Easy Interface</a>
+<a href="libcurl-multi.html" class="menuitem" title="Multi Interface tutorial">Multi Interface</a>
+<a href="libcurl-share.html" class="menuitem" title="Share Interface Tutorial">Share Interface</a>
+</div>
+<div class="contents">
+<div class="where"><a href="https://curl.haxx.se/">curl</a> / <a href="../index.html">libcurl</a> / <a href="index.html">API</a> / <a href="example.html">Examples</a> / <b>postit2-formadd.c</b></div>
+<h1> postit2-formadd.c </h1>
+<p>
+<a href="https://github.com/curl/curl/raw/master/docs/examples/postit2-formadd.c">Download postit2-formadd.c raw</a>
+<PRE>
+<I><FONT COLOR="#B22222">/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ &lt;| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, &lt;daniel@haxx.se&gt;, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.haxx.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ ***************************************************************************/ </FONT></I>
+<I><FONT COLOR="#B22222">/* &lt;DESC&gt;
+ * HTTP Multipart formpost with file upload and two additional parts.
+ * &lt;/DESC&gt;
+ */ </FONT></I>
+<I><FONT COLOR="#B22222">/* Example code that uploads a file name 'foo' to a remote script that accepts
+ * &quot;HTML form based&quot; (as described in RFC1738) uploads using HTTP POST.
+ *
+ * The imaginary form we'll fill in looks like:
+ *
+ * &lt;form method=&quot;post&quot; enctype=&quot;multipart/form-data&quot; action=&quot;examplepost.cgi&quot;&gt;
+ * Enter file: &lt;input type=&quot;file&quot; name=&quot;sendfile&quot; size=&quot;40&quot;&gt;
+ * Enter file name: &lt;input type=&quot;text&quot; name=&quot;filename&quot; size=&quot;30&quot;&gt;
+ * &lt;input type=&quot;submit&quot; value=&quot;send&quot; name=&quot;submit&quot;&gt;
+ * &lt;/form&gt;
+ *
+ * This exact source code has not been verified to work.
+ */ </FONT></I>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;stdio.h&gt;</FONT></B>
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;string.h&gt;</FONT></B>
+&nbsp;
+#<B ><FONT COLOR="#5F9EA0">include</FONT></B> <B><FONT COLOR="#BC8F8F">&lt;curl/curl.h&gt;</FONT></B>
+&nbsp;
+<B><FONT COLOR="#228B22">int</FONT></B> <B><FONT COLOR="#0000FF">main</FONT></B>(<B><FONT COLOR="#228B22">int</FONT></B> argc, <B><FONT COLOR="#228B22">char</FONT></B> *argv[])
+{
+  CURL *curl;
+  CURLcode res;
+&nbsp;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_httppost *formpost = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_httppost *lastptr = NULL;
+  <B><FONT COLOR="#228B22">struct</FONT></B> curl_slist *headerlist = NULL;
+  <B><FONT COLOR="#228B22">static</FONT></B> <B><FONT COLOR="#228B22">const</FONT></B> <B><FONT COLOR="#228B22">char</FONT></B> buf[] = <B><FONT COLOR="#BC8F8F">&quot;Expect:&quot;</FONT></B>;
+&nbsp;
+  <a href="curl_global_init.html">curl_global_init</a>(CURL_GLOBAL_ALL);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the file upload field */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;sendfile&quot;</FONT></B>,
+               CURLFORM_FILE, <B><FONT COLOR="#BC8F8F">&quot;postit2.c&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the filename field */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;filename&quot;</FONT></B>,
+               CURLFORM_COPYCONTENTS, <B><FONT COLOR="#BC8F8F">&quot;postit2.c&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+&nbsp;
+  <I><FONT COLOR="#B22222">/* Fill in the submit field too, even if this is rarely needed */ </FONT></I>
+  <a href="curl_formadd.html">curl_formadd</a>(&amp;formpost,
+               &amp;lastptr,
+               CURLFORM_COPYNAME, <B><FONT COLOR="#BC8F8F">&quot;submit&quot;</FONT></B>,
+               CURLFORM_COPYCONTENTS, <B><FONT COLOR="#BC8F8F">&quot;send&quot;</FONT></B>,
+               CURLFORM_END);
+&nbsp;
+  curl = <a href="curl_easy_init.html">curl_easy_init</a>();
+  <I><FONT COLOR="#B22222">/* initialize custom header list (stating that Expect: 100-continue is not
+     wanted */ </FONT></I>
+  headerlist = <a href="curl_slist_append.html">curl_slist_append</a>(headerlist, buf);
+  <B><FONT COLOR="#A020F0">if</FONT></B>(curl) {
+    <I><FONT COLOR="#B22222">/* what URL that receives this POST */ </FONT></I>
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_URL.html">CURLOPT_URL</a>, <B><FONT COLOR="#BC8F8F">&quot;http://example.com/examplepost.cgi&quot;</FONT></B>);
+    <B><FONT COLOR="#A020F0">if</FONT></B>((argc == 2) &amp;&amp; (!strcmp(argv[1], <B><FONT COLOR="#BC8F8F">&quot;noexpectheader&quot;</FONT></B>)))
+      <I><FONT COLOR="#B22222">/* only disable 100-continue header if explicitly requested */ </FONT></I>
+      <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPHEADER.html">CURLOPT_HTTPHEADER</a>, headerlist);
+    <a href="curl_easy_setopt.html">curl_easy_setopt</a>(curl, <a href="CURLOPT_HTTPPOST.html">CURLOPT_HTTPPOST</a>, formpost);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* Perform the request, res will get the return code */ </FONT></I>
+    res = <a href="curl_easy_perform.html">curl_easy_perform</a>(curl);
+    <I><FONT COLOR="#B22222">/* Check for errors */ </FONT></I>
+    <B><FONT COLOR="#A020F0">if</FONT></B>(res != CURLE_OK)
+      fprintf(stderr, <B><FONT COLOR="#BC8F8F">&quot;<a href="curl_easy_perform.html">curl_easy_perform</a>() failed: %s\n&quot;</FONT></B>,
+              <a href="curl_easy_strerror.html">curl_easy_strerror</a>(res));
+&nbsp;
+    <I><FONT COLOR="#B22222">/* always cleanup */ </FONT></I>
+    <a href="curl_easy_cleanup.html">curl_easy_cleanup</a>(curl);
+&nbsp;
+    <I><FONT COLOR="#B22222">/* then cleanup the formpost chain */ </FONT></I>
+    <a href="curl_formfree.html">curl_formfree</a>(formpost);
+    <I><FONT COLOR="#B22222">/* free slist */ </FONT></I>
+    <a href="curl_slist_free_all.html">curl_slist_free_all</a>(headerlist);
+  }
+  <B><FONT COLOR="#A020F0">return</FONT></B> 0;
+}
+</PRE>
+</div>
+</div>
+
+</BODY>
+</HTML>
